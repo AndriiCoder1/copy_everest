@@ -1,0 +1,18 @@
+from django.contrib import admin
+from .models import Memorial, FamilyInvite, LanguageOverride, QRCode
+
+@admin.register(Memorial)
+class MemorialAdmin(admin.ModelAdmin):
+    list_display = ('id','partner','last_name','status','short_code','storage_bytes_used','storage_bytes_limit')
+
+@admin.register(FamilyInvite)
+class FamilyInviteAdmin(admin.ModelAdmin):
+    list_display = ('id','memorial','email','expires_at','consumed_at')
+
+@admin.register(LanguageOverride)
+class LanguageOverrideAdmin(admin.ModelAdmin):
+    list_display = ('id','memorial','language_code','created_at')
+
+@admin.register(QRCode)
+class QRCodeAdmin(admin.ModelAdmin):
+    list_display = ('id','memorial','version','created_at')
