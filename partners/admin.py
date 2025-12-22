@@ -6,121 +6,69 @@ from django.core.exceptions import ValidationError
 from django.contrib import messages
 from .models import Partner, PartnerUser
 
+# 1. Proxy модель для безопасного отображения
+class PartnerUserProxy(PartnerUser):
+    class Meta:
+        proxy = True
+        verbose_name = 'Partner User'
+        verbose_name_plural = 'Partner Users'
+
+# 2. Форма без поля partner
 class PartnerUserForm(forms.ModelForm):
-    # Поле для пароля (обязательное при создании)
     password1 = forms.CharField(
-        label="Пароль",
+        label="Password",
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
         strip=False,
-        required=False,  # Не обязательно при редактировании существующего
-        help_text="Минимум 8 символов"
+        required=False,
+        help_text="Minimum 8 characters"
     )
     
     password2 = forms.CharField(
-        label="Подтверждение пароля",
+        label="Password confirmation",
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
         strip=False,
-        required=False,  # Не обязательно при редактировании существующего
-        help_text="Введите тот же пароль для подтверждения"
+        required=False,
+        help_text="Enter the same password as before"
     )
     
     class Meta:
         model = PartnerUser
-        fields = ['partner', 'email', 'password1', 'password2', 'role']
-        widgets = {
-            'email': forms.EmailInput(attrs={'placeholder': 'user@example.com'}),
-        }
+        fields = ['partner', 'email', 'password1', 'password2', 'role']  # NO 'partner' field!
+
+
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # При редактировании существующего пользователя, не требуем пароль
         if self.instance.pk:
             self.fields['password1'].required = False
             self.fields['password2'].required = False
-            self.fields['password1'].help_text = "Оставьте пустым, если не хотите менять пароль"
-            self.fields['password2'].help_text = "Оставьте пустым, если не хотите менять пароль"
         else:
-            # При создании нового - пароль обязателен
             self.fields['password1'].required = True
             self.fields['password2'].required = True
     
     def clean_email(self):
-        """Проверка уникальности email"""
         email = self.cleaned_data.get('email')
-        
-        # Проверяем, нет ли уже PartnerUser с таким email
-        if self.instance.pk:  # редактирование существующего
+        if self.instance.pk:
             if PartnerUser.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
-                raise ValidationError("Этот email уже используется другим сотрудником")
-        else:  # создание нового
+                raise ValidationError("This email is already used by another staff member")
+        else:
             if PartnerUser.objects.filter(email=email).exists():
-                raise ValidationError("Этот email уже используется другим сотрудником")
-        
+                raise ValidationError("This email is already used by another staff member")
         return email
     
     def clean(self):
         cleaned_data = super().clean()
-        
-        # Проверяем пароли только если они указаны
         password1 = cleaned_data.get('password1')
         password2 = cleaned_data.get('password2')
         
-        if password1 or password2:  # Если хотя бы одно поле пароля заполнено
+        if password1 or password2:
             if password1 != password2:
-                raise ValidationError({'password2': "Пароли не совпадают"})
-            
+                raise ValidationError({'password2': "Passwords don't match"})
             if len(password1) < 8:
-                raise ValidationError({'password1': "Пароль должен содержать минимум 8 символов"})
-        
+                raise ValidationError({'password1': "Password must be at least 8 characters"})
         return cleaned_data
-    
-    def save(self, commit=True):
-        partner_user = super().save(commit=False)
-        
-        email = self.cleaned_data.get('email')
-        password1 = self.cleaned_data.get('password1')
-        
-        # 1. Создаем или обновляем пользователя Django
-        try:
-            # Ищем существующего пользователя Django
-            user = User.objects.get(email=email)
-            
-            # Обновляем пароль, если он указан
-            if password1:
-                user.set_password(password1)
-                user.save()
-                
-        except User.DoesNotExist:
-            # Создаем нового пользователя Django
-            user = User.objects.create_user(
-                username=email,  # используем email как username
-                email=email,
-                password=password1,  # пароль обязателен при создании
-                is_staff=True,       # доступ в админку
-                is_superuser=False,  # НЕ суперпользователь!
-                first_name='',       # можно добавить поля из PartnerUser
-                last_name=''
-            )
-        
-        # 2. Сохраняем хеш пароля в PartnerUser (если пароль указан)
-        if password1:
-            partner_user.password_hash = make_password(password1)
-        
-        if commit:
-            partner_user.save()
-            
-            # 3. Связываем PartnerUser с User (если в модели есть поле user)
-            # Если в вашей модели нет поля user, эту часть можно убрать
-            try:
-                if hasattr(PartnerUser, 'user'):
-                    partner_user.user = user
-                    partner_user.save(update_fields=['user'])
-            except:
-                pass  # если нет поля user или другая ошибка
-        
-        return partner_user
 
+# 3. Админка для Partner
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'billing_email', 'created_at')
@@ -130,7 +78,6 @@ class PartnerAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        
         try:
             partner_user = PartnerUser.objects.get(email=request.user.email)
             return qs.filter(id=partner_user.partner.id)
@@ -140,81 +87,110 @@ class PartnerAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return request.user.is_superuser
 
-@admin.register(PartnerUser)
+# 4. Админка для PartnerUserProxy
+@admin.register(PartnerUserProxy)
 class PartnerUserAdmin(admin.ModelAdmin):
     form = PartnerUserForm
-    list_display = ('id', 'partner', 'email', 'role', 'created_at', 'get_user_status', 'get_login_info')
+    list_display = ('id', 'partner', 'email', 'role', 'created_at')
     search_fields = ('email', 'partner__name')
     list_filter = ('role', 'partner')
     
-    def get_user_status(self, obj):
-        """Показывает, может ли сотрудник войти в систему"""
-        try:
-            user = User.objects.get(email=obj.email)
-            if user.is_active:
-                return "✅ Может войти"
-            else:
-                return "❌ Не активен"
-        except User.DoesNotExist:
-            return "⚠️ Нет учетной записи"
-    get_user_status.short_description = 'Статус входа'
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
     
-    def get_login_info(self, obj):
-        """Показывает логин для входа"""
-        return f"Логин: {obj.email}"
-    get_login_info.short_description = 'Данные для входа'
+        if not request.user.is_superuser and 'partner' in form.base_fields:
+            form.base_fields['partner'].widget = forms.HiddenInput()
+        
+            # Автоматически заполняем партнером создателя
+            try:
+                creator_profile = PartnerUser.objects.get(email=request.user.email)
+                form.base_fields['partner'].initial = creator_profile.partner
+            except PartnerUser.DoesNotExist:
+                pass
     
+        return form
+
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        
         try:
-            partner_user = PartnerUser.objects.get(email=request.user.email)
-            return qs.filter(partner=partner_user.partner)
+            admin_partner_user = PartnerUser.objects.get(email=request.user.email)
+            return qs.filter(partner=admin_partner_user.partner)
         except PartnerUser.DoesNotExist:
             return qs.none()
     
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        
-        if not request.user.is_superuser:
-            if 'partner' in form.base_fields:
-                try:
-                    partner_user = PartnerUser.objects.get(email=request.user.email)
-                    # Показываем только своего партнера
-                    form.base_fields['partner'].queryset = form.base_fields['partner'].queryset.filter(
-                        id=partner_user.partner.id
-                    )
-                    # Автоматически назначаем своего партнера при создании
-                    if not obj:  # если создаем нового пользователя
-                        form.base_fields['partner'].initial = partner_user.partner
-                        form.base_fields['partner'].disabled = True
-                except PartnerUser.DoesNotExist:
-                    form.base_fields['partner'].queryset = form.base_fields['partner'].queryset.none()
-        
-        return form
+    
     
     def save_model(self, request, obj, form, change):
-        # Добавляем сообщение о создании пользователя
-        if not change:  # если создаем нового
-            messages.success(
-                request, 
-                f'Сотрудник {obj.email} создан. Для входа используйте email и указанный пароль.'
-            )
+        """
+        Автоматически создаем User при создании PartnerUser
+        """
+    
+        # 1. Если это создание нового PartnerUser (не редактирование)
+        if not change:
+            # 2. Если создатель - суперадмин
+            if request.user.is_superuser:
+                # Суперадмин должен был выбрать партнера в форме
+                if not obj.partner:
+                    raise ValidationError("Partner must be selected when creating user as superadmin.")
         
+            # 3. Если создатель - партнер-админ
+            else:
+                try:
+                    # Находим профиль создателя
+                    creator_profile = PartnerUser.objects.get(email=request.user.email)
+                    obj.partner = creator_profile.partner
+                except PartnerUser.DoesNotExist:
+                    # Если у создателя нет профиля, ошибка
+                    raise ValidationError("Cannot create user: your partner profile not found.")
+    
+        # 4. Сохраняем PartnerUser (это создаст запись в partners_partneruser)
         super().save_model(request, obj, form, change)
     
+        # 5. Теперь создаем/обновляем User Django
+        email = obj.email
+        password = form.cleaned_data.get('password1') if hasattr(form, 'cleaned_data') else None
+    
+        try:
+            # Ищем существующего User
+            user = User.objects.get(email=email)
+        
+            # Обновляем пароль, если он указан
+            if password:
+                user.set_password(password)
+                user.save()
+                # Сохраняем хеш пароля в PartnerUser
+                obj.password_hash = make_password(password)
+                obj.save(update_fields=['password_hash'])
+                
+        except User.DoesNotExist:
+            # Создаем нового User
+            if not password:
+                # Если пароль не указан, генерируем случайный
+                import secrets
+                password = secrets.token_urlsafe(12)
+        
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                is_staff=True,
+                is_superuser=False
+            )
+        
+            # Сохраняем хеш пароля в PartnerUser
+            obj.password_hash = make_password(password)
+            obj.save(update_fields=['password_hash'])
+    
     def response_add(self, request, obj, post_url_continue=None):
-        """Переопределяем ответ после создания"""
+        """Добавляем сообщение после создания"""
         response = super().response_add(request, obj, post_url_continue)
-        
-        # Добавляем всплывающее сообщение
-        messages.info(
+        messages.success(
             request,
-            f'✅ Создан сотрудник {obj.email}. '
-            f'Для входа в систему используйте: '
-            f'Email: {obj.email}, пароль: указанный при создании.'
+            f'✅ Partner user {obj.email} created successfully. '
+            f'Login email: {obj.email}'
         )
-        
         return response
