@@ -1,5 +1,5 @@
 class DisableCSRFMiddleware:
-    """Middleware для полного отключения проверки CSRF (ТОЛЬКО для разработки!)."""
+    """Middleware to disable CSRF check (ONLY for development!)."""
     def __init__(self, get_response):
         self.get_response = get_response
 

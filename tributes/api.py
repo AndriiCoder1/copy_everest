@@ -48,7 +48,7 @@ class TributeApprove(APIView):
         # Убедимся, что это тот же мемориал
         if memorial.id != tribute.memorial_id:
             return Response(
-                {'detail': 'Нет прав на модерацию этого соболезнования'}, 
+                {'detail': 'No rights to moderate this tribute'}, 
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -74,7 +74,7 @@ class TributeReject(APIView):
         # Убедимся, что это тот же мемориал
         if memorial.id != tribute.memorial_id:
             return Response(
-                {'detail': 'Нет прав на модерацию этого соболезнования'}, 
+                {'detail': 'No rights to moderate this tribute'}, 
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -86,7 +86,8 @@ class TributeReject(APIView):
         return Response({'status': tribute.status})
     
     def _get_memorial_with_permission_check(self, request, memorial_id):
-        """Общий метод проверки прав на мемориал"""
+        """Check permissions for accessing a memorial"""
+        # For partner
         partner_user = get_partner_user(request)
         if partner_user:
             memorial = get_object_or_404(
@@ -100,12 +101,12 @@ class TributeReject(APIView):
             invite = request.family_invite
             if invite.memorial.id != int(memorial_id):
                 return Response(
-                    {'detail': 'Токен не для этого мемориала'}, 
+                    {'detail': 'Token not for this memorial'}, 
                     status=status.HTTP_403_FORBIDDEN
                 )
             return invite.memorial
         
         return Response(
-            {'detail': 'Нет прав доступа'}, 
+            {'detail': 'No access rights'}, 
             status=status.HTTP_403_FORBIDDEN
         )

@@ -20,7 +20,7 @@ class MemorialCreate(APIView):
     def post(self, request):
         partner_user = get_partner_user(request)
         if not partner_user:
-            return Response({'error': 'Не авторизован'}, status=401)
+            return Response({'error': 'Not authorized'}, status=401)
         
         serializer = MemorialCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -55,7 +55,7 @@ class MemorialList(APIView):
     def get(self, request):
         partner_user = get_partner_user(request)
         if not partner_user:
-            return Response({'error': 'Не авторизован'}, status=401)
+            return Response({'error': 'Not authorized'}, status=401)
         
         # Только мемориалы этого партнера
         memorials = Memorial.objects.filter(partner=partner_user.partner)
@@ -77,7 +77,7 @@ class MemorialActivate(APIView):
     def post(self, request, memorial_id):
         partner_user = get_partner_user(request)
         if not partner_user:
-            return Response({'error': 'Не авторизован'}, status=401)
+            return Response({'error': 'Not authorized'}, status=401)
         
         # Находим мемориал И проверяем, что он принадлежит партнеру
         memorial = get_object_or_404(
@@ -111,7 +111,7 @@ class FamilyInviteCreate(APIView):
     def post(self, request, memorial_id):
         partner_user = get_partner_user(request)
         if not partner_user:
-            return Response({'error': 'Не авторизован'}, status=401)
+            return Response({'error': 'Not authorized'}, status=401)
         
         # Находим мемориал И проверяем, что он принадлежит партнеру
         memorial = get_object_or_404(

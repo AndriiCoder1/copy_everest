@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.contrib import admin
 from django import forms
 from django.utils.html import format_html
@@ -13,19 +14,19 @@ from partners.models import PartnerUser
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:
     """
-    Миксин для всех моделей с ForeignKey на Memorial
-    Обеспечивает изоляцию по партнерам
+    Mixin for all models with ForeignKey on Memorial
+    Provides isolation by partner
     """
     
     def get_partner_user(self, request):
-        """Получение partner_user для текущего пользователя"""
+        """Get partner_user for current user"""
         try:
             return PartnerUser.objects.get(email=request.user.email)
         except PartnerUser.DoesNotExist:
             return None
     
     def get_queryset(self, request):
-        """Фильтрация объектов по партнеру"""
+        """Filter objects by partner"""
         qs = super().get_queryset(request)
         
         if request.user.is_superuser:
@@ -38,7 +39,7 @@ class MemorialRelatedAdminMixin:
         return qs.none()
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Фильтрация выпадающего списка memorial"""
+        """Filter dropdown list of memorial"""
         if db_field.name == "memorial":
             if request.user.is_superuser:
                 kwargs["queryset"] = Memorial.objects.all()
@@ -52,7 +53,7 @@ class MemorialRelatedAdminMixin:
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     def get_changeform_initial_data(self, request):
-        """Обработка initial данных с memorial_id из GET-параметра"""
+        """Handle initial data with memorial_id from GET parameter"""
         initial = super().get_changeform_initial_data(request)
         
         if 'memorial_id' in request.GET:
@@ -75,7 +76,7 @@ class MemorialRelatedAdminMixin:
         return initial
     
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
-        """Защита от создания объектов для чужих мемориалов"""
+        """Protect against creating objects for other memorials"""
         if request.method == 'GET' and 'memorial_id' in request.GET:
             memorial_id = request.GET.get('memorial_id')
             
@@ -87,20 +88,20 @@ class MemorialRelatedAdminMixin:
                     except Memorial.DoesNotExist:
                         messages.error(
                             request, 
-                            f"У вас нет доступа к этому мемориалу для создания {self.model._meta.verbose_name}."
+                            f"You do not have access to this memorial to create {self.model._meta.verbose_name}."
                         )
                         # Редирект на список объектов текущей модели
                         app_label = self.model._meta.app_label
                         model_name = self.model._meta.model_name
                         return redirect(f'admin:{app_label}_{model_name}_changelist')
                 else:
-                    messages.error(request, "У вас нет прав партнера.")
+                    messages.error(request, "You do not have partner rights.")
                     return redirect('admin:index')
         
         return super().changeform_view(request, object_id, form_url, extra_context)
     
     def save_model(self, request, obj, form, change):
-        """Проверка прав при сохранении объекта"""
+        """Check partner rights when saving object"""
         if not request.user.is_superuser and hasattr(obj, 'memorial'):
             partner_user = self.get_partner_user(request)
             
@@ -108,7 +109,7 @@ class MemorialRelatedAdminMixin:
                 # Проверяем, что мемориал принадлежит партнеру
                 if obj.memorial.partner != partner_user.partner:
                     raise PermissionDenied(
-                        f"Нельзя создать/изменить {self.model._meta.verbose_name} для чужого мемориала"
+                        f"You do not have access to this memorial to create {self.model._meta.verbose_name}."
                     )
         
         super().save_model(request, obj, form, change)
@@ -185,13 +186,53 @@ class LanguageOverrideAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
 
 @admin.register(MediaAsset)
 class MediaAssetAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
-    list_display = ('id', 'memorial', 'kind', 'file_size_display', 'is_public', 'created_at')
+    list_display = ('id', 'memorial', 'get_kind_display', 'file_size_display', 'is_public', 'created_at')
     list_filter = ('kind', 'is_public', 'created_at')
     readonly_fields = ('file_size_display', 'dimensions_display')
     search_fields = ('memorial__first_name', 'memorial__last_name', 'original_filename')
     
+    def get_kind_display(self, obj):
+        """Human-readable display for kind"""
+        kinds = {
+            'photo': 'Photo',
+            'document': 'Document',
+            'video': 'Video',
+            'audio': 'Audio'
+        }
+        return kinds.get(obj.kind, obj.kind)
+    get_kind_display.short_description = "Type"
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter ForeignKey fields"""
+        # Вызываем метод миксина для фильтрации memorial
+        if db_field.name == "memorial":
+            return super().formfield_for_foreignkey(db_field, request, **kwargs)
+        
+        # Фильтрация для поля uploaded_by_user
+        if db_field.name == "uploaded_by_user":
+            if request.user.is_superuser:
+                # Суперадмин видит всех пользователей
+                kwargs["queryset"] = User.objects.all()
+            else:
+                try:
+                    # Партнер видит только своих сотрудников
+                    partner_user = PartnerUser.objects.get(email=request.user.email)
+                    partner = partner_user.partner
+                    
+                    # Получаем всех PartnerUser этого партнера
+                    partner_users = PartnerUser.objects.filter(partner=partner)
+                    # Получаем соответствующих User
+                    user_emails = [pu.email for pu in partner_users]
+                    kwargs["queryset"] = User.objects.filter(email__in=user_emails)
+                except PartnerUser.DoesNotExist:
+                    kwargs["queryset"] = User.objects.none()
+            
+            
+        
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def file_size_display(self, obj):
-        """Отображение размера файла в читаемом формате"""
+        """Display file size in readable format"""
         if obj.size_bytes:
             size = obj.size_bytes
             if size < 1024:
@@ -201,14 +242,14 @@ class MediaAssetAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
             else:
                 return f"{size / (1024 * 1024):.1f} MB"
         return "N/A"
-    file_size_display.short_description = "Размер файла"
+    file_size_display.short_description = "File size"
     
     def dimensions_display(self, obj):
-        """Отображение размеров изображения"""
+        """Display image dimensions"""
         if obj.width and obj.height:
             return f"{obj.width}×{obj.height}px"
         return "N/A"
-    dimensions_display.short_description = "Размеры"
+    dimensions_display.short_description = "Dimensions"
     
     # Методы из миксина уже обеспечивают фильтрацию по memorial__partner            
 
@@ -221,8 +262,8 @@ class QRCodeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
     def qr_png_preview(self, obj):
         if obj.qr_png and hasattr(obj.qr_png, 'url'):
             return format_html('<img src="{}" height="50" />', obj.qr_png.url)
-        return "Нет изображения"
-    qr_png_preview.short_description = "Предпросмотр QR"
+        return "No image" 
+    qr_png_preview.short_description = "QR Preview"
     
     def save_model(self, request, obj, form, change):
         # Сначала устанавливаем версию
@@ -237,9 +278,22 @@ class QRCodeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
 
 @admin.register(MediaThumbnail)
 class MediaThumbnailAdmin(admin.ModelAdmin):
-    list_display = ('id', 'asset', 'preset', 'size_bytes_display')
+    list_display = ('id', 'asset', 'get_preset_display', 'size_bytes_display')
     list_filter = ('preset',)
     
+    # Добавляем human-readable отображение для preset
+    def get_preset_display(self, obj):
+        """Human-readable display for preset"""
+        presets = {
+            'thumbnail_small': 'Small (150×150)',
+            'thumbnail_medium': 'Medium (300×300)',
+            'thumbnail_large': 'Large (600×600)',
+            'preview': 'Preview',
+            'original': 'Original'
+        }
+        return presets.get(obj.preset, obj.preset)
+    get_preset_display.short_description = "Preset"
+
     def size_bytes_display(self, obj):
         if obj.size_bytes:
             size = obj.size_bytes
@@ -250,10 +304,10 @@ class MediaThumbnailAdmin(admin.ModelAdmin):
             else:
                 return f"{size / (1024 * 1024):.1f} MB"
         return "N/A"
-    size_bytes_display.short_description = "Размер"
+    size_bytes_display.short_description = "Size"
     
     def get_queryset(self, request):
-        """Фильтрация через asset__memorial__partner"""
+        """Filter through asset__memorial__partner"""
         qs = super().get_queryset(request)
         
         if request.user.is_superuser:
@@ -266,7 +320,7 @@ class MediaThumbnailAdmin(admin.ModelAdmin):
             return qs.none()
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Фильтруем выпадающий список asset (связь с MediaAsset)"""
+        """Filter ForeignKey field asset (relation with MediaAsset)"""
         if db_field.name == "asset":
             if request.user.is_superuser:
                 kwargs["queryset"] = MediaAsset.objects.all()

@@ -24,7 +24,7 @@ class Memorial(models.Model):
 
     def __str__(self):
     # Показываем фамилию, имя, код И название фирмы партнёра
-       partner_name = self.partner.name if self.partner else "Без партнёра"
+       partner_name = self.partner.name if self.partner else "Without a partner" 
        return f"{self.last_name} {self.first_name} ({self.short_code}) - {partner_name}"
 
     class Meta:

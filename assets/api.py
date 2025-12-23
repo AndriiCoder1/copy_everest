@@ -57,14 +57,14 @@ class MediaUpload(APIView):
         return Response({'id': asset.id}, status=status.HTTP_201_CREATED)
     
     def _get_memorial_with_permission_check(self, request, memorial_id):
-        """Проверяет права на доступ к мемориалу"""
-        # Для партнера
+        """Check permissions for accessing a memorial"""
+        # For partner
         partner_user = get_partner_user(request)
         if partner_user:
             memorial = get_object_or_404(
                 Memorial, 
                 pk=memorial_id,
-                partner=partner_user.partner  # ← КРИТИЧЕСКО ВАЖНО!
+                partner=partner_user.partner  # Filter by partner
             )
             return memorial
         
@@ -73,13 +73,13 @@ class MediaUpload(APIView):
             invite = request.family_invite
             if invite.memorial.id != int(memorial_id):
                 return Response(
-                    {'detail': 'Токен не для этого мемориала'}, 
+                    {'detail': 'Token not for this memorial'}, 
                     status=status.HTTP_403_FORBIDDEN
                 )
             return invite.memorial
         
         return Response(
-            {'detail': 'Нет прав доступа'}, 
+            {'detail': 'No access rights'}, 
             status=status.HTTP_403_FORBIDDEN
         )
 
@@ -114,7 +114,7 @@ class MediaDelete(APIView):
         # Убедимся, что это тот же мемориал
         if memorial.id != asset.memorial_id:
             return Response(
-                {'detail': 'Нет прав на удаление этого файла'}, 
+                {'detail': 'No rights to delete this file'}, 
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -128,7 +128,8 @@ class MediaDelete(APIView):
         return Response(status=204)
     
     def _get_memorial_with_permission_check(self, request, memorial_id):
-        """Тот же метод проверки прав (можно вынести в отдельный модуль)"""
+        """Check permissions for accessing a memorial"""
+        # For partner
         partner_user = get_partner_user(request)
         if partner_user:
             memorial = get_object_or_404(
@@ -142,12 +143,12 @@ class MediaDelete(APIView):
             invite = request.family_invite
             if invite.memorial.id != int(memorial_id):
                 return Response(
-                    {'detail': 'Токен не для этого мемориала'}, 
+                    {'detail': 'Token not for this memorial'}, 
                     status=status.HTTP_403_FORBIDDEN
                 )
             return invite.memorial
         
         return Response(
-            {'detail': 'Нет прав доступа'}, 
+            {'detail': 'No access rights'}, 
             status=status.HTTP_403_FORBIDDEN
         )

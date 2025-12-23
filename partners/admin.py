@@ -93,7 +93,7 @@ class PartnerUserAdmin(admin.ModelAdmin):
     form = PartnerUserForm
     list_display = ('id', 'partner', 'email', 'role', 'created_at')
     search_fields = ('email', 'partner__name')
-    list_filter = ('role', 'partner')
+    
     
 
     def get_form(self, request, obj=None, **kwargs):
@@ -126,7 +126,7 @@ class PartnerUserAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         """
-        Автоматически создаем User при создании PartnerUser
+        Automatically create a User when creating a PartnerUser  
         """
     
         # 1. Если это создание нового PartnerUser (не редактирование)
@@ -186,7 +186,7 @@ class PartnerUserAdmin(admin.ModelAdmin):
             obj.save(update_fields=['password_hash'])
     
     def response_add(self, request, obj, post_url_continue=None):
-        """Добавляем сообщение после создания"""
+        """Add success message after creation"""
         response = super().response_add(request, obj, post_url_continue)
         messages.success(
             request,
