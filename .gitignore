@@ -250,3 +250,9 @@ cython_debug/
 # EverEst specific
 backup-*.tar.gz
 *.txt.bak
+everest_context.txt.txt
+permissions_role.txt
+everest_context.txt.txt
+логика_создания_партнера.txt
+
+everest_context.txt.txt
