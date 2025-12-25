@@ -17,8 +17,6 @@ class Memorial(models.Model):
     storage_bytes_limit = models.BigIntegerField(default=1073741824)
     subscription_start_at = models.DateTimeField(null=True)
     subscription_end_at = models.DateTimeField(null=True)
-    qr_png = models.FileField(upload_to='qr/', null=True, blank=True) # QR код в формате PNG поменял добавил blank=True
-    qr_pdf = models.FileField(upload_to='qr/', null=True, blank=True) # QR код в формате PDF поменял добавил blank=True
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -10,7 +10,6 @@ from .models import Memorial, FamilyInvite, LanguageOverride, QRCode
 from assets.models import MediaAsset, MediaThumbnail 
 from partners.models import PartnerUser
 
-
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:
     """
@@ -118,6 +117,24 @@ class MemorialRelatedAdminMixin:
 class MemorialAdmin(admin.ModelAdmin):
     list_display = ('id','partner','last_name','status','short_code','storage_bytes_used','storage_bytes_limit')
     
+
+    actions = ['generate_qr_codes_action']
+
+    def generate_qr_codes_action(self, request, queryset):
+        """Генерирует QR-коды для выбранных мемориалов"""
+        for memorial in queryset:
+            if memorial.status == 'active':
+                # Используйте метод из Решения 3
+                success = memorial.generate_qr_code_if_needed()
+                if success:
+                    self.message_user(request, f"QR-код сгенерирован для {memorial.short_code}")
+                else:
+                    self.message_user(request, f"QR-код уже существует для {memorial.short_code}", level='warning')
+            else:
+                self.message_user(request, f"Мемориал {memorial.short_code} не активен", level='error')
+    
+    generate_qr_codes_action.short_description = "Сгенерировать QR-коды"
+
     # 1. Фильтрация мемориалов
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -212,20 +229,16 @@ class MediaAssetAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
         if db_field.name == "uploaded_by_user":
             if request.user.is_superuser:
                 # Суперадмин видит всех пользователей
-                kwargs["queryset"] = User.objects.all()
+                kwargs["queryset"] = PartnerUser.objects.all()
             else:
                 try:
                     # Партнер видит только своих сотрудников
-                    partner_user = PartnerUser.objects.get(email=request.user.email)
-                    partner = partner_user.partner
-                    
-                    # Получаем всех PartnerUser этого партнера
-                    partner_users = PartnerUser.objects.filter(partner=partner)
-                    # Получаем соответствующих User
-                    user_emails = [pu.email for pu in partner_users]
-                    kwargs["queryset"] = User.objects.filter(email__in=user_emails)
+                    current_partner_user = PartnerUser.objects.get(email=request.user.email)
+                    partner = current_partner_user.partner
+                    # Фильтруем PartnerUser по партнеру
+                    kwargs["queryset"] = PartnerUser.objects.filter(partner=partner) 
                 except PartnerUser.DoesNotExist:
-                    kwargs["queryset"] = User.objects.none()
+                    kwargs["queryset"] = PartnerUser.objects.none()  
             
             
         
@@ -332,3 +345,8 @@ class MediaThumbnailAdmin(admin.ModelAdmin):
                     kwargs["queryset"] = MediaAsset.objects.none()
         
         return super().formfield_for_foreignkey(db_field, request, **kwargs)    
+
+def partner_user_display(self):
+    return f"{self.email} ({self.partner.name})"    
+
+PartnerUser.__str__ = partner_user_display
