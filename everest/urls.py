@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,10 +13,6 @@ urlpatterns = [
     path('', include('audits.urls')),
     path('', include('django_prometheus.urls')),
 ]
-from django.conf import settings
-from django.conf.urls.static import static
-
-# ... ваш существующий код urlpatterns ...
 
 # ЭТО ТОЛЬКО ДЛЯ РАЗРАБОТКИ!
 if settings.DEBUG:
