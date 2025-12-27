@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Family Tribute Moderation - {{ memorial.title }}</title>
+    <style>
+        .tribute { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        .approved { background-color: #d4edda; border-color: #c3e6cb; }
+        .actions { margin-top: 10px; }
+        button { margin-right: 5px; padding: 5px 15px; cursor: pointer; }
+        .approve-btn { background-color: #28a745; color: white; border: none; }
+        .reject-btn { background-color: #dc3545; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>Family Tribute Moderation - {{ memorial.title }}</h1>
+    
+    <h2>Pending Tributes ({{ pending_tributes|length }})</h2>
+    {% for tribute in pending_tributes %}
+    <div class="tribute pending">
+        <p><strong>Author:</strong> {{ tribute.author_name }}</p>
+        <p><strong>Date:</strong> {{ tribute.created_at|date:"d.m.Y H:i" }}</p>
+        <p><strong>Message:</strong><br>{{ tribute.text|linebreaks }}</p>
+        <div class="actions">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="tribute_id" value="{{ tribute.id }}">
+                <button type="submit" name="action" value="approve" class="approve-btn">✓ Approve</button>
+                <button type="submit" name="action" value="reject" class="reject-btn">✗ Reject</button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <p>No pending tributes to moderate.</p> 
+    {% endfor %}
+    
+    <h2>Approved Tributes ({{ approved_tributes|length }})</h2>
+    {% for tribute in approved_tributes %}
+    <div class="tribute approved">
+        <p><strong>Author:</strong> {{ tribute.author_name }}</p>
+        <p><strong>Date:</strong> {{ tribute.created_at|date:"d.m.Y H:i" }}</p>
+        <p>{{ tribute.text|linebreaks }}</p>
+    </div>
+    {% empty %}
+    <p>No approved tributes yet.</p>
+    {% endfor %}
+</body>
+</html>

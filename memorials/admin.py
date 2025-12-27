@@ -9,6 +9,7 @@ from django.contrib import messages
 from .models import Memorial, FamilyInvite, LanguageOverride, QRCode
 from assets.models import MediaAsset, MediaThumbnail 
 from partners.models import PartnerUser
+from django.urls import reverse
 
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:
@@ -115,25 +116,50 @@ class MemorialRelatedAdminMixin:
 
 @admin.register(Memorial)
 class MemorialAdmin(admin.ModelAdmin):
-    list_display = ('id','partner','last_name','status','short_code','storage_bytes_used','storage_bytes_limit')
+    list_display = ('id','partner','last_name','status','short_code','storage_bytes_used','storage_bytes_limit', 'public_qr_link', 'family_invite_info')  
+    readonly_fields = ('public_qr_link', 'family_invite_info') 
     
 
     actions = ['generate_qr_codes_action']
 
-    def generate_qr_codes_action(self, request, queryset):
-        """Генерирует QR-коды для выбранных мемориалов"""
-        for memorial in queryset:
-            if memorial.status == 'active':
-                # Используйте метод из Решения 3
-                success = memorial.generate_qr_code_if_needed()
-                if success:
-                    self.message_user(request, f"QR-код сгенерирован для {memorial.short_code}")
-                else:
-                    self.message_user(request, f"QR-код уже существует для {memorial.short_code}", level='warning')
-            else:
-                self.message_user(request, f"Мемориал {memorial.short_code} не активен", level='error')
-    
-    generate_qr_codes_action.short_description = "Сгенерировать QR-коды"
+    def public_qr_link(self, obj):
+        """Displays a public QR code and link""" 
+        if obj.status == 'active' and hasattr(obj, 'qrcode') and obj.qrcode.qr_png:
+            public_url = f"http://172.20.10.4:8000/m/{obj.short_code}/"  # Ваш локальный адрес
+            return format_html(
+                '<strong>Public Access (for memorial):</strong><br>'
+                '<img src="{}" style="max-height: 100px; border: 1px solid #ccc;"/><br>'
+                '<small><a href="{}" target="_blank">{}</a></small>',
+                obj.qrcode.qr_png.url,
+                public_url,
+                public_url
+            )
+        return "Memorial is not active or QR code is not created."
+    public_qr_link.short_description = "QR for guests"
+
+    def family_invite_info(self, obj):
+        """Displays information for inviting family and token"""
+        try:
+            # Ищем активное приглашение
+            invite = obj.familyinvite_set.filter(is_active=True).first()
+            if invite:
+                family_url = f"http://172.20.10.4:8000/memorials/{obj.short_code}/moderate/?token={invite.token}"
+                return format_html(
+                    '<strong>Family Access (with token):</strong><br>'
+                    'Link: <a href="{}" target="_blank">{}</a><br>'
+                    'Token: <code>{}</code><br>'
+                    '<small>Send this link to your family. Do not post on the memorial.</small>',
+                    family_url,
+                    "Family moderation link",
+                    invite.token
+                )
+        except Exception:
+            pass
+        return format_html(
+            '<a href="{}">Send invitation to family</a>',
+            reverse('admin:memorials_familyinvite_add') + f'?memorial_id={obj.id}'
+        )
+    family_invite_info.short_description = "Family Access Info"
 
     # 1. Фильтрация мемориалов
     def get_queryset(self, request):

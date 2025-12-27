@@ -113,45 +113,100 @@ class MemorialRelatedAdminMixin:
         super().save_model(request, obj, form, change)
 
 
+class TributeAdminForm(forms.ModelForm):
+    """Form with auto-filling fields""" 
+    class Meta:
+        model = Tribute
+        
+        exclude = ['moderated_by_user']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = kwargs.pop('request', None)
+        
+        # Если пользователь не суперадмин (т.е. партнер),
+        # делаем поле статуса неактивным или скрываем.
+        if request and not request.user.is_superuser:
+            # Вариант А: Сделать поле readonly (рекомендуется)
+            self.fields['status'].disabled = True
+            # Или добавить подсказку
+            self.fields['status'].help_text = 'Only administrators can change the status. The family moderates via the web interface.'
+
+# ===== TributeAdmin =====
 @admin.register(Tribute)
 class TributeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
-    list_display = ('id', 'memorial', 'author_name', 'status', 'created_at', 'approved_at')
-    list_filter = ('status',)
+    form = TributeAdminForm
+    list_display = ('id', 'memorial', 'author_name', 'status', 'created_at', 'approved_at', 'moderated_by_user')
+    list_filter = ('status',) 
     search_fields = ('author_name', 'message', 'memorial__first_name', 'memorial__last_name')
+    
+    # Скрываем moderated_by_user из формы, так как он будет заполняться автоматически
+    exclude = ['moderated_by_user']
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Filter ForeignKey fields for Tribute"""
-        # Filter for moderated_by_user field
+        # ОРИГИНАЛЬНАЯ логика вашего миксина для поля memorial
+        if db_field.name == "memorial":
+            return super().formfield_for_foreignkey(db_field, request, **kwargs)
+        
+        # НОВАЯ логика: для moderated_by_user показываем только PartnerUser текущего партнера
         if db_field.name == "moderated_by_user":
             if request.user.is_superuser:
-                # Суперадмин видит всех пользователей
-                kwargs["queryset"] = User.objects.all()
+                kwargs["queryset"] = PartnerUser.objects.all()
             else:
                 try:
-                    # Партнер видит только своих сотрудников
-                    partner_user = PartnerUser.objects.get(email=request.user.email)
-                    partner = partner_user.partner
-                    
-                    # Получаем всех PartnerUser этого партнера
-                    partner_users = PartnerUser.objects.filter(partner=partner)
-                    # Получаем соответствующих User
-                    user_emails = [pu.email for pu in partner_users]
-                    kwargs["queryset"] = User.objects.filter(email__in=user_emails)
-                except PartnerUser.DoesNotExist:
-                    kwargs["queryset"] = User.objects.none()
+                    partner_user = self.get_partner_user(request)
+                    if partner_user:
+                        kwargs["queryset"] = PartnerUser.objects.filter(partner=partner_user.partner)
+                    else:
+                        kwargs["queryset"] = PartnerUser.objects.none()
+                except Exception:
+                    kwargs["queryset"] = PartnerUser.objects.none()
         
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    # Можно добавить actions для массового одобрения/отклонения
-    actions = ['approve_selected', 'reject_selected']
     
+    def get_readonly_fields(self, request, obj=None):
+        """Making the status field read-only for partners""" 
+        readonly_fields = list(super().get_readonly_fields(request, obj) or [])
+        if not request.user.is_superuser:
+            readonly_fields.append('status')
+        return readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        """Overriding save for partners"""
+        # Партнеры не могут менять статус через админку
+        if not request.user.is_superuser and 'status' in form.changed_data:
+            # Восстанавливаем исходный статус
+            if change:
+                obj.status = Tribute.objects.get(pk=obj.pk).status
+            else:
+                obj.status = 'pending'  # Все новые трибьюты от партнеров — на модерации
+        elif not change and not request.user.is_superuser:
+            # Для новых трибьютов от партнеров (если статус не менялся явно)
+            obj.status = 'pending'        
+    
+        super().save_model(request, obj, form, change)
+        
+    
+
     def approve_selected(self, request, queryset):
         """Approve selected tributes"""
+        updated = 0
         for tribute in queryset:
             tribute.status = 'approved'
             tribute.approved_at = timezone.now()
+            
+            # Автоматически устанавливаем текущего пользователя как модератора
+            try:
+                partner_user = PartnerUser.objects.get(email=request.user.email)
+                tribute.moderated_by_user = partner_user
+            except PartnerUser.DoesNotExist:
+                pass
+            
             tribute.save()
-        self.message_user(request, f"{queryset.count()} {self.model._meta.verbose_name} approved.")
+            updated += 1
+        
+        self.message_user(request, f"{updated} {self.model._meta.verbose_name} approved.")
     approve_selected.short_description = "Approve selected"
     
     def reject_selected(self, request, queryset):
