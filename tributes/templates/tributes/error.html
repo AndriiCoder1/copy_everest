@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error - EverEst</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            padding: 40px; 
+            text-align: center; 
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .error-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 50px;
+        }
+        .error-icon {
+            font-size: 48px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            color: #d32f2f;
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #ffebee;
+            border-radius: 5px;
+            border-left: 4px solid #d32f2f;
+        }
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+        .btn-back {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-home {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h2>Failed to Access Memorial</h2> 
+        
+        <div class="error-message">
+            {% if error %}
+                {{ error }}
+            {% else %}
+                An unknown error occurred.
+            {% endif %}
+        </div>
+        
+        <p>Possible reasons:</p>
+        <ul style="text-align: left; display: inline-block; margin: 15px 0;">
+            <li>Token link expired or invalid</li>
+            <li>Invitation was revoked</li>
+            <li>Invitation expiration date has passed</li>
+        </ul>
+        
+        <div class="actions">
+            <a href="javascript:history.back()" class="btn btn-back">← Return to Previous Page</a>
+            <a href="/" class="btn btn-home">Go to Home</a>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 14px; color: #666;">
+            If the problem persists, please contact the memorial administrator.
+        </p>
+    </div>
+</body>
+</html>
