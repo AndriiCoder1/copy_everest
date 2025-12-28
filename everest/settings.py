@@ -23,7 +23,8 @@ INSTALLED_APPS = [
     'partners.apps.PartnersConfig',
     'memorials.apps.MemorialsConfig',
     'assets.apps.AssetsConfig',
-    'tributes.apps.TributesConfig',
+    #'tributes.apps.TributesConfig',
+    'tributes',
     'shortlinks.apps.ShortlinksConfig',
     'audits.apps.AuditsConfig',
 ]
@@ -159,3 +160,18 @@ REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
 # Если используется TokenAuthentication, добавьте её
 # 'rest_framework.authentication.TokenAuthentication',
 APPEND_SLASH = True
+
+# === EMAIL SETTINGS ===
+# Для разработки: выводить email в консоль
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Для продакшена (позже):
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-app-password'
+
+# Адрес отправителя по умолчанию
+DEFAULT_FROM_EMAIL = 'noreply@everest.com'
