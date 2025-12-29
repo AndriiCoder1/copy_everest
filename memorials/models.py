@@ -1,4 +1,5 @@
 from django.db import models
+from model_utils import FieldTracker
 
 class Memorial(models.Model):
     partner = models.ForeignKey('partners.Partner', on_delete=models.CASCADE, related_name='memorials')
@@ -19,6 +20,12 @@ class Memorial(models.Model):
     subscription_end_at = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    tracker = FieldTracker()
+
+    def save(self, *args, **kwargs):
+        # Сохраняем измененные поля перед сохранением
+        self._changed_fields = self.tracker.changed()
+        super().save(*args, **kwargs)
 
     def __str__(self):
     # Показываем фамилию, имя, код И название фирмы партнёра
