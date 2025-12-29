@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'tributes',
     'shortlinks.apps.ShortlinksConfig',
     'audits.apps.AuditsConfig',
+    
 ]
 
 MIDDLEWARE = [
@@ -41,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
+    'audits.middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'everest.urls'

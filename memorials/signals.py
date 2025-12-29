@@ -15,7 +15,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# memorials/signals.py - финальная версия
+
 @receiver(post_save, sender=Memorial)
 def generate_qr_on_activation(sender, instance, created, **kwargs):
     """
