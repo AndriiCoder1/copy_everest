@@ -1,0 +1,110 @@
+<!-- templates/test_js_i18n.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test JavaScript i18n</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript i18n Test</h1>
+    
+    <div class="test-result">
+        <h2>Test 1: Simple JavaScript translations</h2>
+        <p>Loading simple translations from: <code>/simple-jsi18n/?language=de</code></p>
+        <div id="simple-result">Loading...</div>
+    </div>
+    
+    <div class="test-result">
+        <h2>Test 2: Django Admin JavaScript translations</h2>
+        <p>Loading from: <code>/admin/jsi18n/?language=de</code></p>
+        <div id="django-result">Loading...</div>
+    </div>
+    
+    <h3>Test different languages:</h3>
+    <p>
+        <a href="?lang=de">DE</a> | 
+        <a href="?lang=fr">FR</a> | 
+        <a href="?lang=it">IT</a> | 
+        <a href="?lang=en">EN</a>
+    </p>
+    
+    <script>
+        // Получаем язык из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get('lang') || 'de';
+        
+        // Функция для проверки переводов
+        function checkTranslations(prefix, elementId) {
+            const element = document.getElementById(elementId);
+            
+            if (window.django && django.catalog) {
+                const catalog = django.catalog;
+                const testWords = ['Cancel', 'Save', 'Delete', 'Search'];
+                
+                let html = `<p class="success">✅ Translations loaded successfully!</p>`;
+                html += `<p>Found ${Object.keys(catalog).length} translations</p>`;
+                html += '<ul>';
+                
+                testWords.forEach(word => {
+                    const translation = catalog[word];
+                    if (translation) {
+                        html += `<li><strong>${word}:</strong> ${translation}</li>`;
+                    } else {
+                        html += `<li class="error"><strong>${word}:</strong> NOT FOUND</li>`;
+                    }
+                });
+                
+                html += '</ul>';
+                html += `<p>Prefix: ${prefix}</p>`;
+                element.innerHTML = html;
+                
+                // Логируем в консоль
+                console.log(`${prefix} catalog:`, catalog);
+            } else {
+                element.innerHTML = `<p class="error">❌ django.catalog not found!</p>`;
+                console.log(`${prefix}: django.catalog not found`);
+            }
+        }
+        
+        // Загружаем простые переводы
+        function loadSimpleTranslations() {
+            const script = document.createElement('script');
+            script.src = `/simple-jsi18n/?language=${lang}`;
+            script.onload = function() {
+                console.log('Simple translations loaded');
+                checkTranslations('Simple', 'simple-result');
+            };
+            script.onerror = function() {
+                document.getElementById('simple-result').innerHTML = 
+                    '<p class="error">❌ Failed to load simple translations</p>';
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Загружаем Django переводы
+        function loadDjangoTranslations() {
+            const script = document.createElement('script');
+            script.src = `/admin/jsi18n/?language=${lang}`;
+            script.onload = function() {
+                console.log('Django translations loaded');
+                checkTranslations('Django', 'django-result');
+            };
+            script.onerror = function() {
+                document.getElementById('django-result').innerHTML = 
+                    '<p class="error">❌ Failed to load Django translations (may need authentication)</p>';
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Запускаем тесты
+        loadSimpleTranslations();
+        loadDjangoTranslations();
+    </script>
+</body>
+</html>

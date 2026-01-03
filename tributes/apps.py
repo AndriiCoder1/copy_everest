@@ -3,8 +3,8 @@ from django.apps import AppConfig
 class TributesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'tributes'
+    verbose_name = 'Tributes'
 
     def ready(self):
-        print("=== TributesConfig.ready() called ===")
-        # Импортируем сигналы
-        import tributes.signals
+        
+        import tributes.signals 

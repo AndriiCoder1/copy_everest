@@ -69,21 +69,39 @@ def log_memorial_change(sender, instance, created, **kwargs):
             }
         )
 
+# Логирование создания и модерации тributes
 @receiver(post_save, sender=Tribute)
 def log_tribute_approval(sender, instance, created, **kwargs):
-    # Логируем только одобрение/отклонение (модерацию)
-    if not created and instance.tracker.has_changed('is_approved'):
-        # Получаем информацию об акторе
-        actor_type, actor_id = _get_actor_info()
-
-        # Если актор - system (не аутентифицирован), возможно, это семья через токен
-        # В этом случае можно уточнить тип актора
-        if actor_type == 'system' and hasattr(instance, 'moderated_by_family'):
-            actor_type = 'family'
-
+    print(f"=== AUDIT DEBUG: Tribute post_save signal fired. Created: {created}, ID: {instance.id}, Sender: {sender} ===")
+    actor_type, actor_id = _get_actor_info()
+    
+    # 1. ЛОГИРОВАНИЕ СОЗДАНИЯ НОВОГО ТРИБУТА
+    if created:
         AuditLog.objects.create(
             actor_type=actor_type,
-            actor_id=actor_id, 
+            actor_id=actor_id,
+            action='create_tribute',
+            target_type='tribute',
+            target_id=instance.id,
+            metadata={
+                'memorial_id': instance.memorial.id,
+                'memorial_code': instance.memorial.short_code,
+                'author_name': instance.author_name,
+                'initial_status': 'awaiting_moderation',  
+                'gdpr_relevant': True  
+            }
+        )
+        return  
+    
+    # 2. ЛОГИРОВАНИЕ МОДЕРАЦИИ (одобрение/отклонение) 
+    if instance.tracker.has_changed('is_approved'):
+        # Если актор - system (не аутентифицирован), возможно, это семья через токен
+        if actor_type == 'system' and hasattr(instance, 'moderated_by_family'):
+            actor_type = 'family'
+        
+        AuditLog.objects.create(
+            actor_type=actor_type,
+            actor_id=actor_id,
             action='moderate_tribute',
             target_type='tribute',
             target_id=instance.id,
@@ -91,7 +109,7 @@ def log_tribute_approval(sender, instance, created, **kwargs):
                 'memorial_id': instance.memorial.id,
                 'old_status': instance.tracker.previous('is_approved'),
                 'new_status': instance.is_approved,
-                'gdpr_relevant': True  # Модерация комментариев - важно для GDPR
+                'gdpr_relevant': True
             }
         )
 
@@ -129,4 +147,4 @@ def log_media_access(sender, instance, created, **kwargs):
             # Эта строка покажет, что именно пошло не так
             print(f"❌ ERROR: Failed to create AuditLog. Exception: {e}")
             import traceback
-            traceback.print_exc()  # Напечатает полную трассировку ошибки
+            traceback.print_exc() 

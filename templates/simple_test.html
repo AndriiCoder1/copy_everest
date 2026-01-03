@@ -1,0 +1,178 @@
+<!-- templates/simple_test.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple JS i18n Test</title>
+    <script>
+        // Глобальная переменная для хранения загруженного каталога
+        window.loadedCatalogs = {};
+        
+        function loadTranslations(lang) {
+            document.getElementById('results').innerHTML = `Loading ${lang} translations...`;
+            
+            // Используем fetch вместо script tag для лучшего контроля
+            fetch(`/simple-jsi18n/?language=${lang}`)
+                .then(response => response.text())
+                .then(jsCode => {
+                    // Выполняем JavaScript код
+                    eval(jsCode);
+                    
+                    // Сохраняем каталог
+                    if (window.django && django.catalog) {
+                        window.loadedCatalogs[lang] = {...django.catalog};
+                        console.log(`${lang} catalog loaded:`, django.catalog);
+                        checkTranslations(lang);
+                    } else {
+                        document.getElementById('results').innerHTML = 
+                            `<p style="color: red;">Failed to create django.catalog for ${lang}</p>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('results').innerHTML = 
+                        `<p style="color: red;">Error loading ${lang}: ${error}</p>`;
+                });
+        }
+        
+        function checkTranslations(lang) {
+            const catalog = window.loadedCatalogs[lang] || (window.django && django.catalog);
+            const results = document.getElementById('results');
+            
+            if (catalog) {
+                let html = `<h3>${lang.toUpperCase()} Translations:</h3><ul>`;
+                
+                const testWords = ['Cancel', 'Save', 'Delete', 'Search', 'Add', 'Change'];
+                testWords.forEach(word => {
+                    const translation = catalog[word];
+                    if (translation && translation !== word) {
+                        html += `<li><strong>${word}:</strong> ${translation} ✅</li>`;
+                    } else if (translation === word) {
+                        html += `<li><strong>${word}:</strong> ${translation} (not translated)</li>`;
+                    } else {
+                        html += `<li><strong>${word}:</strong> NOT FOUND ❌</li>`;
+                    }
+                });
+                
+                html += '</ul>';
+                html += `<p>Total keys: ${Object.keys(catalog).length}</p>`;
+                
+                // Показываем все ключи
+                html += `<details><summary>Show all keys (${Object.keys(catalog).length})</summary>`;
+                html += '<ul>';
+                Object.keys(catalog).sort().forEach(key => {
+                    html += `<li><strong>${key}:</strong> ${catalog[key]}</li>`;
+                });
+                html += '</ul></details>';
+                
+                results.innerHTML = html;
+            } else {
+                results.innerHTML = `<p style="color: red;">No catalog found for ${lang}!</p>`;
+            }
+        }
+        
+        // Автоматически загружаем при загрузке страницы
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lang = urlParams.get('lang') || 'de';
+            loadTranslations(lang);
+        };
+    </script>
+</head>
+<body>
+    <h1>Simple JavaScript i18n Test</h1>
+    
+    <h2>Step 1: Load translations</h2>
+    <button onclick="loadTranslations('de')">Load German</button>
+    <button onclick="loadTranslations('fr')">Load French</button>
+    <button onclick="loadTranslations('it')">Load Italian</button>
+
+    <!-- После существующих кнопок добавьте: -->
+    <h2>Django Admin Translations (requires public endpoint)</h2>
+    <button onclick="loadAdminTranslations('de')">Load Django Admin DE</button>
+    <button onclick="loadAdminTranslations('fr')">Load Django Admin FR</button>
+    <button onclick="loadAdminTranslations('it')">Load Django Admin IT</button>
+    <div id="admin-results"></div>
+
+    <script>
+    function loadAdminTranslations(lang) {
+        const results = document.getElementById('admin-results');
+        results.innerHTML = `Loading Django Admin ${lang}...`;
+    
+        // Пробуем публичный endpoint
+        fetch(`/debug-admin-jsi18n/?language=${lang}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(jsCode => {
+                // Очищаем предыдущие переводы
+                if (window.django) {
+                    window.django = undefined;
+                }
+            
+                // Выполняем код
+                try {
+                    eval(jsCode);
+                
+                    if (window.django && django.catalog) {
+                        const catalog = django.catalog;
+                        let html = `<h3>Django Admin ${lang.toUpperCase()}:</h3>`;
+                        html += `<p>Found ${Object.keys(catalog).length} translations</p>`;
+                    
+                        // Проверяем ключевые слова
+                        const testWords = ['Cancel', 'Save', 'Delete', 'Search'];
+                        html += '<ul>';
+                        testWords.forEach(word => {
+                            if (catalog[word]) {
+                                html += `<li><strong>${word}:</strong> ${catalog[word]} ✅</li>`;
+                            } else {
+                                html += `<li><strong>${word}:</strong> NOT FOUND ❌</li>`;
+                            }
+                        }); 
+                        html += '</ul>';
+                    
+                        results.innerHTML = html;
+                        console.log(`Django Admin ${lang} catalog:`, catalog);
+                    } else {
+                        results.innerHTML = `<p style="color: red;">django.catalog not created!</p>`;
+                    }
+                } catch (error) {
+                    results.innerHTML = `<p style="color: red;">JavaScript error: ${error}</p>`;
+                    console.error('JavaScript error:', error);
+                }
+            })
+            .catch(error => {
+                results.innerHTML = `<p style="color: red;">Failed to load: ${error}</p>`;
+                console.error('Fetch error:', error);
+            });
+}
+</script>
+    
+    <h2>Step 2: Check translations</h2>
+    <div id="results">Loading...</div>
+    
+    <h2>Direct test links:</h2>
+    <ul>
+        <li><a href="?lang=de">Test German</a></li>
+        <li><a href="?lang=fr">Test French</a></li>
+        <li><a href="?lang=it">Test Italian</a></li>
+        <li><a href="/simple-jsi18n/?language=de" target="_blank">View German JS source</a></li>
+        <li><a href="/simple-jsi18n/?language=fr" target="_blank">View French JS source</a></li>
+        <li><a href="/simple-jsi18n/?language=it" target="_blank">View Italian JS source</a></li>
+    </ul>
+    
+    <h2>Test in browser console:</h2>
+    <p>Open DevTools (F12) and try:</p>
+    <pre>
+// After loading translations:
+console.log('django.catalog:', django.catalog);
+console.log('Cancel:', django.catalog['Cancel']);
+console.log('Save:', django.catalog['Save']);
+
+// Or if using loadedCatalogs:
+console.log('German:', window.loadedCatalogs.de);
+    </pre>
+</body>
+</html>

@@ -1,0 +1,131 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-01 13:34+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+#: .\assets\apps.py:7
+msgid "Assets"
+msgstr "Actifs"
+
+#: .\assets\models.py:19
+msgid "Media Asset"
+msgstr "Média"
+
+#: .\assets\models.py:20
+msgid "Media Assets"
+msgstr "Médias"
+
+#: .\assets\models.py:34
+msgid "Media Thumbnail"
+msgstr "Vignette média"
+
+#: .\assets\models.py:35
+msgid "Media Thumbnails"
+msgstr "Vignettes média"
+
+#: .\audits\apps.py:7
+msgid "Audits"
+msgstr "Audits"
+
+#: .\audits\models.py:16
+msgid "Audit Log"
+msgstr "Journal d'audit"
+
+#: .\audits\models.py:17
+msgid "Audit Logs"
+msgstr "Journaux d'audit"
+
+#: .\memorials\apps.py:7 .\memorials\models.py:38
+msgid "Memorials"
+msgstr "Mémoriaux"
+
+#: .\memorials\models.py:37
+msgid "Memorial"
+msgstr "Mémorial"
+
+#: .\memorials\models.py:55
+msgid "Family Invite"
+msgstr "Invitation familiale"
+
+#: .\memorials\models.py:56
+msgid "Family Invites"
+msgstr "Invitations familiales"
+
+#: .\memorials\models.py:76
+msgid "Language Override"
+msgstr "Remplacement de langue"
+
+#: .\memorials\models.py:77
+msgid "Language Overrides"
+msgstr "Remplacements de langue"
+
+#: .\memorials\models.py:94
+msgid "QR Code"
+msgstr "QR Code"
+
+#: .\memorials\models.py:95
+msgid "QR Codes"
+msgstr "QR Codes"
+
+#: .\partners\apps.py:7 .\partners\models.py:13
+msgid "Partners"
+msgstr "Partenaires"
+
+#: .\partners\models.py:12
+msgid "Partner"
+msgstr "Partenaire"
+
+#: .\partners\models.py:28
+msgid "Partner User"
+msgstr "Utilisateur partenaire"
+
+#: .\partners\models.py:29
+msgid "Partner Users"
+msgstr "Utilisateurs partenaires"
+
+#: .\shortlinks\apps.py:7
+msgid "Shortlinks"
+msgstr "Liens courts"
+
+#: .\shortlinks\models.py:15
+msgid "Short Link"
+msgstr "Lien court"
+
+#: .\shortlinks\models.py:16
+msgid "Short Links"
+msgstr "Liens courts"
+
+#: .\tributes\apps.py:7 .\tributes\models.py:37
+msgid "Tributes"
+msgstr "Hommages"
+
+#: .\tributes\models.py:17
+msgid "For moderation"
+msgstr "Pour modération"
+
+#: .\tributes\models.py:18
+msgid "Approved"
+msgstr "Approuvé"
+
+#: .\tributes\models.py:19
+msgid "Rejected"
+msgstr "Rejeté"
+
+#: .\tributes\models.py:31
+msgid "partner moderator"
+msgstr "modérateur partenaire"
+
+#: .\tributes\models.py:36
+msgid "Tribute"
+msgstr "Hommage"
+
+msgid "Cancel"
+msgstr "Annuler"

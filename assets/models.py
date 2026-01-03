@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 class MediaAsset(models.Model):
     memorial = models.ForeignKey('memorials.Memorial', on_delete=models.CASCADE, related_name='assets')
@@ -15,9 +16,13 @@ class MediaAsset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = _('Media Asset')
+        verbose_name_plural = _('Media Assets')
         indexes = [
             models.Index(fields=['memorial','created_at']),
         ]
+    def __str__(self):
+        return f"{self.original_filename or self.file.name}"
 
 class MediaThumbnail(models.Model):
     asset = models.ForeignKey(MediaAsset, on_delete=models.CASCADE, related_name='thumbnails')
@@ -26,4 +31,9 @@ class MediaThumbnail(models.Model):
     size_bytes = models.IntegerField()
 
     class Meta:
+        verbose_name = _('Media Thumbnail')
+        verbose_name_plural = _('Media Thumbnails')
         unique_together = [('asset','preset')]
+
+    def __str__(self):
+        return f"Thumbnail for {self.asset}"

@@ -1,6 +1,7 @@
 from django.db import models
-from partners.models import PartnerUser  # Импортируем здесь
-from django.contrib.auth.models import User  # Импортируем здесь
+from partners.models import PartnerUser 
+from django.contrib.auth.models import User 
+from django.utils.translation import gettext_lazy as _
 
 class AuditLog(models.Model):
     actor_type = models.CharField(max_length=24)
@@ -12,12 +13,15 @@ class AuditLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = _('Audit Log')
+        verbose_name_plural = _('Audit Logs')
         indexes = [
             models.Index(fields=['created_at']),
         ]
-
+        
+        
     def get_actor_display(self):
-        """Возвращает читаемое представление актора для админки."""
+        """Returns a readable representation of the actor for the admin panel.""" 
         try:
             if self.actor_type == 'partner_user':
                 pu = PartnerUser.objects.get(id=self.actor_id)

@@ -3,7 +3,8 @@ from django.apps import AppConfig
 class MemorialsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'memorials'
+    verbose_name = 'Memorials'
     
     def ready(self):
-        # Импортируем сигналы только когда приложение готово
-        import memorials.signals
+        
+        import memorials.signals 

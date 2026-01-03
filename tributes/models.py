@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 class Tribute(models.Model):
     memorial = models.ForeignKey(
@@ -8,37 +9,37 @@ class Tribute(models.Model):
         related_name='tributes'
     )
     author_name = models.CharField(max_length=120)
-    author_email = models.EmailField(null=True, blank=True)  # ← Добавить blank=True
+    author_email = models.EmailField(null=True, blank=True)  
     text = models.TextField()
     status = models.CharField(
         max_length=10, 
         choices=[
-            ('pending', 'For moderation'),    # ← Улучшить названия для админки
-            ('approved', 'Approved'),
-            ('rejected', 'Rejected')
+            ('pending', _('For moderation')),
+            ('approved', _('Approved')),
+            ('rejected', _('Rejected'))
         ], 
         default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    approved_at = models.DateTimeField(null=True, blank=True)  # ← Добавить blank=True
+    approved_at = models.DateTimeField(null=True, blank=True)  
     moderated_by_user = models.ForeignKey(
         'partners.PartnerUser', 
         null=True, 
-        blank=True,                         # ← КРИТИЧНО: добавить blank=True
+        blank=True,                         
         on_delete=models.SET_NULL,
-        editable=False,                     # ← Важно: скрыть из форм
-        verbose_name='partner moderator' 
+        editable=False,                     
+        verbose_name=_('partner moderator') 
     )
-    updated_at = models.DateTimeField(auto_now=True)  # ← Добавить для отслеживания изменений
+    updated_at = models.DateTimeField(auto_now=True)  
 
     class Meta:
+        verbose_name = _('Tribute')     
+        verbose_name_plural = _('Tributes')
         indexes = [models.Index(fields=['memorial', 'status', 'created_at'])]
-        verbose_name = 'Tribute'      # ← Для красивого отображения в админке
-        verbose_name_plural = 'Tributes'
-        ordering = ['-created_at']           # ← Сортировка по умолчанию
+        ordering = ['-created_at']          
     
     def __str__(self):
-        return f"Tribute from {self.author_name} ({self.status})" 
+        return f"Tribute from {self.author_name or 'Anonymous'} ({self.status})"
     
     def save(self, *args, **kwargs):
         # Автоматически обновляем approved_at при одобрении

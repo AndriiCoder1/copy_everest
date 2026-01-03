@@ -8,6 +8,7 @@ from memorials.models import Memorial
 from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import redirect
+from django.utils.translation import gettext_lazy as _
 
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:

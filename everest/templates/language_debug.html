@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <title>Language Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .success { color: green; }
+        .error { color: red; }
+        .debug { background: #f8f8f8; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Language Debug Page</h1>
+    
+    <h2>Current Settings:</h2>
+    <table>
+        <tr><th>Setting</th><th>Value</th></tr>
+        <tr><td>LANGUAGE_CODE (settings)</td><td>{{ LANGUAGE_CODE }}</td></tr>
+        <tr><td>Request language</td><td>{{ request.LANGUAGE_CODE }}</td></tr>
+        <tr><td>Session language</td><td>{{ request.session.django_language|default:"Not set" }}</td></tr>
+        <tr><td>Cookie language</td><td>{{ request.COOKIES.django_language|default:"Not set" }}</td></tr>
+    </table>
+    
+    <h2>Test Translations:</h2>
+    <table>
+        <tr><th>English</th><th>Translated</th><th>Status</th></tr>
+        <tr>
+            <td>Memorial</td>
+            <td>{% trans "Memorial" %}</td>
+            <td class="{% if 'Memorial' != 'Memorial'|trans %}success{% else %}error{% endif %}">
+                {% if 'Memorial' != 'Memorial'|trans %}✓ Translated{% else %}✗ Not translated{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Save</td>
+            <td>{% trans "Save" %}</td>
+            <td class="{% if 'Save' != 'Save'|trans %}success{% else %}error{% endif %}">
+                {% if 'Save' != 'Save'|trans %}✓ Translated{% else %}✗ Not translated{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Delete</td>
+            <td>{% trans "Delete" %}</td>
+            <td class="{% if 'Delete' != 'Delete'|trans %}success{% else %}error{% endif %}">
+                {% if 'Delete' != 'Delete'|trans %}✓ Translated{% else %}✗ Not translated{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Home</td>
+            <td>{% trans "Home" %}</td>
+            <td class="{% if 'Home' != 'Home'|trans %}success{% else %}error{% endif %}">
+                {% if 'Home' != 'Home'|trans %}✓ Translated{% else %}✗ Not translated{% endif %}
+            </td>
+        </tr>
+    </table>
+    
+    <h2>Test Links (with ?language=):</h2>
+    <ul>
+        <li><a href="?language=de">German (de)</a></li>
+        <li><a href="?language=fr">French (fr)</a></li>
+        <li><a href="?language=it">Italian (it)</a></li>
+        <li><a href="?language=en">English (en)</a></li>
+    </ul>
+    
+    <h2>Debug Info:</h2>
+    <div class="debug">
+        <pre>{{ debug_info|pprint }}</pre>
+    </div>
+    
+    <h2>Test Links to Admin (direct):</h2>
+    <ul>
+        <li><a href="/admin/?language=de">Admin in German</a></li>
+        <li><a href="/admin/?language=fr">Admin in French</a></li>
+        <li><a href="/admin/?language=it">Admin in Italian</a></li>
+        <li><a href="/admin/?language=en">Admin in English</a></li>
+    </ul>
+    
+    <script>
+        // Добавляем текущий язык в URL ссылок
+        document.querySelectorAll('a').forEach(link => {
+            if (link.href.includes('?')) {
+                const url = new URL(link.href);
+                const currentUrl = new URL(window.location.href);
+                const currentLang = currentUrl.searchParams.get('language');
+                if (currentLang) {
+                    url.searchParams.set('language', currentLang);
+                    link.href = url.toString();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
