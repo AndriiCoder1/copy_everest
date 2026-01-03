@@ -1,5 +1,6 @@
 from django.db import models
 from model_utils import FieldTracker
+from django.utils.translation import gettext_lazy as _
 
 class Memorial(models.Model):
     partner = models.ForeignKey('partners.Partner', on_delete=models.CASCADE, related_name='memorials')
@@ -28,11 +29,13 @@ class Memorial(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-    # Показываем фамилию, имя, код И название фирмы партнёра
+       # Показываем фамилию, имя, код И название фирмы партнёра
        partner_name = self.partner.name if self.partner else "Without a partner" 
        return f"{self.last_name} {self.first_name} ({self.short_code}) - {partner_name}"
 
     class Meta:
+        verbose_name = _('Memorial')
+        verbose_name_plural = _('Memorials')
         constraints = [
             models.CheckConstraint(check=models.Q(storage_bytes_used__lte=models.F('storage_bytes_limit')), name='storage_limit_check'),
         ]
@@ -49,15 +52,36 @@ class FamilyInvite(models.Model):
     consumed_at = models.DateTimeField(null=True)
 
     class Meta:
+        verbose_name = _('Family Invite')
+        verbose_name_plural = _('Family Invites')
         indexes = [models.Index(fields=['memorial','expires_at'])]
+
+    def __str__(self):
+        # Показываем email и связанный мемориал
+        memorial_info = f"Memorial #{self.memorial.id}"
+        if hasattr(self.memorial, 'short_code'):
+            memorial_info = self.memorial.short_code
+        return f"Invite for {self.email} ({memorial_info})"    
+
 
 class LanguageOverride(models.Model):
     memorial = models.ForeignKey(Memorial, on_delete=models.CASCADE, related_name='language_overrides')
-    language_code = models.CharField(max_length=5)
+    language_code = models.CharField(max_length=5)  
+    field_name = models.CharField(max_length=100)  
+    translated_text = models.TextField()           
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = [('memorial','language_code')]
+        unique_together = [('memorial', 'language_code', 'field_name')]
+        verbose_name = _('Language Override')
+        verbose_name_plural = _('Language Overrides')
+
+    def __str__(self):
+        # Показываем язык, поле и связанный мемориал
+        memorial_info = f"Memorial #{self.memorial.id}"
+        if hasattr(self.memorial, 'short_code'):
+            memorial_info = self.memorial.short_code
+        return f"{self.language_code}:{self.field_name} for {memorial_info}"    
 
 class QRCode(models.Model):
     memorial = models.ForeignKey(Memorial, on_delete=models.CASCADE, related_name='qrcodes')
@@ -67,4 +91,13 @@ class QRCode(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = _('QR Code')
+        verbose_name_plural = _('QR Codes')
         indexes = [models.Index(fields=['memorial','created_at'])]
+    
+    def __str__(self):
+        # Показываем версию и связанный мемориал
+        memorial_info = f"Memorial #{self.memorial.id}"
+        if hasattr(self.memorial, 'short_code'):
+            memorial_info = self.memorial.short_code
+        return f"QR Code v{self.version} for {memorial_info}"

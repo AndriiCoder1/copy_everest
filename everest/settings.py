@@ -8,7 +8,7 @@ BASE_URL = 'http://172.20.10.4:8000'
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'change-me')
 DEBUG = True
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.20.10.4,0.0.0.0').split(',')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.20.10.4,0.0.0.0,testserver').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -23,26 +23,29 @@ INSTALLED_APPS = [
     'partners.apps.PartnersConfig',
     'memorials.apps.MemorialsConfig',
     'assets.apps.AssetsConfig',
-    #'tributes.apps.TributesConfig',
     'tributes',
     'shortlinks.apps.ShortlinksConfig',
     'audits.apps.AuditsConfig',
-    
 ]
 
+# ИСПРАВЛЕНО: Один раз определяем MIDDLEWARE, уже без csrf
 MIDDLEWARE = [
-    'everest.middleware.DisableCSRFMiddleware',
+    #'everest.middleware.DebugLocaleMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'everest.middleware.ForceLanguageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
     'audits.middleware.AuditMiddleware',
+    'everest.middleware.ForceJSI18nMiddleware',
+    'everest.middleware.DisableCSRFMiddleware',
+      
 ]
 
 ROOT_URLCONF = 'everest.urls'
@@ -73,11 +76,10 @@ DATABASES = {
     }
 }
 
+# Временное отключение Redis, так как он не работает
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache', 
     }
 }
 
@@ -90,18 +92,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher']
 
-LANGUAGE_CODE = 'en'
+
+LANGUAGE_CODE = 'de'  
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
 LANGUAGES = [
-    ('de-ch', 'Deutsch (Schweiz)'),
-    ('fr-ch', 'Français (Suisse)'),
-    ('it-ch', 'Italiano (Svizzera)'),
+    ('de', 'Deutsch'),
+    ('fr', 'Français'),
+    ('it', 'Italiano'),
     ('en', 'English'),
 ]
+
 
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
@@ -138,42 +142,28 @@ SECURE_REFERRER_POLICY = 'no-referrer'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {'console': {'class': 'logging.StreamHandler'}},
     'root': {'handlers': ['console'], 'level': 'INFO'},
 }
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
-# Временно отключаем проверку Origin для CSRF для локальной разработки
+
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://172.20.10.4:8000']
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_USE_SESSIONS = False
-CSRF_COOKIE_HTTPONLY = False  # Позволяет JavaScript читать CSRF токен (нужно для некоторых форм)
-
-# Ключевая настройка: отключаем проверку CSRF для всех вьюх
-MIDDLEWARE = [mw for mw in MIDDLEWARE if mw != 'django.middleware.csrf.CsrfViewMiddleware']
-
-# Дополнительно отключаем CSRF в REST Framework, если он используется
-REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
-    'rest_framework.authentication.SessionAuthentication',
-]
-# Если используется TokenAuthentication, добавьте её
-# 'rest_framework.authentication.TokenAuthentication',
-APPEND_SLASH = True
+CSRF_COOKIE_HTTPONLY = False 
 
 # === EMAIL SETTINGS ===
-# Для разработки: выводить email в консоль
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# Для продакшена (позже):
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-app-password'
-
-# Адрес отправителя по умолчанию
 DEFAULT_FROM_EMAIL = 'noreply@everest.com'
+
+# Принудительный сброс кэша переводов при старте
+import django.utils.translation
+import django.utils.translation.trans_real as trans_real
+
+# Сбрасываем кэш при запуске
+django.utils.translation._translations = {}
+trans_real._translations = {}
+
+print("=== ПЕРЕВОДЫ: Кэш сброшен при запуске ===")
+LOGIN_URL = '/admin/login/'

@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from .models import Partner, PartnerUser
+from django.utils.translation import gettext_lazy as _
 
 # 1. Proxy модель для безопасного отображения
 class PartnerUserProxy(PartnerUser):
@@ -33,7 +34,7 @@ class PartnerUserForm(forms.ModelForm):
     
     class Meta:
         model = PartnerUser
-        fields = ['partner', 'email', 'password1', 'password2', 'role']  # NO 'partner' field!
+        fields = ['partner', 'email', 'password1', 'password2', 'role'] 
 
 
     

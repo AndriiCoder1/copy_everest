@@ -10,6 +10,7 @@ from .models import Memorial, FamilyInvite, LanguageOverride, QRCode
 from assets.models import MediaAsset, MediaThumbnail 
 from partners.models import PartnerUser
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:
@@ -125,7 +126,7 @@ class MemorialAdmin(admin.ModelAdmin):
     def public_qr_link(self, obj):
         """Displays a public QR code and link""" 
         if obj.status == 'active' and hasattr(obj, 'qrcode') and obj.qrcode.qr_png:
-            public_url = f"http://172.20.10.4:8000/m/{obj.short_code}/"  # Ваш локальный адрес
+            public_url = f"http://172.20.10.4:8000/m/{obj.short_code}/" 
             return format_html(
                 '<strong>Public Access (for memorial):</strong><br>'
                 '<img src="{}" style="max-height: 100px; border: 1px solid #ccc;"/><br>'
@@ -190,7 +191,7 @@ class MemorialAdmin(admin.ModelAdmin):
         
         return form
 
-# Аналогично для других моделей...
+
 
 @admin.register(FamilyInvite)
 class FamilyInviteAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
@@ -290,8 +291,8 @@ class MediaAssetAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
         return "N/A"
     dimensions_display.short_description = "Dimensions"
     
-    # Методы из миксина уже обеспечивают фильтрацию по memorial__partner            
-
+            
+# Методы из миксина уже обеспечивают фильтрацию по memorial__partner
 @admin.register(QRCode)
 class QRCodeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
     list_display = ('id', 'memorial', 'version', 'qr_png_preview', 'created_at')
