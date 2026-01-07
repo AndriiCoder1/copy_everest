@@ -42,7 +42,7 @@ class MemorialPublicSerializer(serializers.ModelSerializer):
             return TributeListSerializer(qs, many=True).data
         except Exception as e:
             # Логируем ошибку для отладки
-            print(f"⚠️ Error while receiving tributes: {type(e).__name__}: {e}") 
+            #print(f"⚠️ Error while receiving tributes: {type(e).__name__}: {e}") 
             return []  # Возвращаем пустой список вместо ошибки
      def get_assets(self, obj):
         try:
@@ -50,5 +50,5 @@ class MemorialPublicSerializer(serializers.ModelSerializer):
             qs = obj.assets.filter(is_public=True)
             return MediaAssetSerializer(qs, many=True).data
         except Exception as e:
-            print(f"⚠️ Error while receiving assets: {type(e).__name__}: {e}") 
+            #print(f"⚠️ Error while receiving assets: {type(e).__name__}: {e}") 
             return []

@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+// Debug info for language
+console.log("=== ADMIN LANGUAGE DEBUG ===");
+console.log("Language code: {{ LANGUAGE_CODE }}");
+console.log("Session language: {% if request.session.django_language %}{{ request.session.django_language }}{% else %}not set{% endif %}");
+
+// Optional: Force language from URL parameter
+const urlParams = new URLSearchParams(window.location.search);
+const forceLang = urlParams.get('language');
+if (forceLang) {
+    console.log("URL language parameter:", forceLang);
+}
+</script>
+{% endblock %}

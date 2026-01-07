@@ -1,0 +1,121 @@
+<!-- templates/admin/login.html -->
+{% extends "admin/login.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Показываем СУЩЕСТВУЮЩИЙ переключатель Django */
+#header .theme-toggle {
+    display: block !important;
+    position: absolute !important;
+    right: 20px !important;
+    top: 15px !important;
+    z-index: 1000 !important;
+    margin: 0 !important;
+}
+
+/* Отодвигаем заголовок влево */
+#branding {
+    padding-right: 60px !important;
+    position: relative;
+}
+
+/* Убираем другие скрытые переключатели */
+.theme-toggle:not(#header .theme-toggle) {
+    display: none !important;
+}
+</style>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+// Активируем СУЩЕСТВУЮЩИЙ переключатель Django
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== ACTIVATING EXISTING DJANGO THEME TOGGLE ===');
+    
+    // 1. Находим ВСЕ существующие переключатели
+    const allToggles = document.querySelectorAll('.theme-toggle');
+    console.log('Found', allToggles.length, 'theme toggles');
+    
+    // 2. Берём первый и перемещаем в заголовок
+    if (allToggles.length > 0) {
+        const toggle = allToggles[0];
+        const header = document.querySelector('#header');
+        
+        if (header) {
+            // Устанавливаем правильное положение
+            toggle.style.cssText = `
+                display: block !important;
+                position: absolute !important;
+                right: 20px !important;
+                top: 15px !important;
+                z-index: 1000 !important;
+                margin: 0 !important;
+            `;
+            
+            // Добавляем в заголовок если ещё не там
+            if (!header.contains(toggle)) {
+                header.style.position = 'relative';
+                header.appendChild(toggle);
+            }
+            
+            console.log('Django theme toggle activated at:', toggle.style.top, toggle.style.right);
+        }
+    } else {
+        // 3. Если Django не создал переключатель, создаём минимальный
+        console.log('No Django toggle found, creating minimal one');
+        
+        const toggle = document.createElement('button');
+        toggle.className = 'theme-toggle';
+        toggle.innerHTML = '🌙';
+        toggle.style.cssText = `
+            position: absolute !important;
+            right: 20px !important;
+            top: 15px !important;
+            z-index: 1000 !important;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+        `;
+        
+        toggle.onclick = function() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'auto';
+            const next = current === 'dark' ? 'light' : current === 'light' ? 'auto' : 'dark';
+            
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+        };
+        
+        const header = document.querySelector('#header');
+        if (header) {
+            header.style.position = 'relative';
+            header.appendChild(toggle);
+            
+            // Восстанавливаем сохранённую тему
+            const saved = localStorage.getItem('theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+                toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+            }
+        }
+    }
+    
+    // 4. Удаляем лишние переключатели (оставляем только один)
+    setTimeout(() => {
+        const toggles = document.querySelectorAll('.theme-toggle');
+        if (toggles.length > 1) {
+            console.log('Removing duplicate toggles:', toggles.length - 1);
+            for (let i = 1; i < toggles.length; i++) {
+                toggles[i].remove();
+            }
+        }
+    }, 100);
+});
+</script>
+{% endblock %}

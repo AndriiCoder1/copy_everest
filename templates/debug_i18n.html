@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug i18n Loading</title>
+    <meta charset="utf-8">
+    <script>
+        // Тестовая функция для проверки загрузки переводов
+        function testTranslations() {
+            console.log("=== DEBUG I18N ===");
+            console.log("1. Проверяем window.django:", window.django);
+            console.log("2. Проверяем window.gettext:", window.gettext);
+            
+            if (window.django && window.django.gettext) {
+                console.log("✅ Переводы загружены!");
+                console.log("Тест перевода 'Cancel':", window.django.gettext('Cancel'));
+                console.log("Тест перевода 'Save':", window.django.gettext('Save'));
+                return true;
+            } else {
+                console.log("❌ Переводы НЕ загружены!");
+                return false;
+            }
+        }
+        
+        // Загружаем переводы с разных URL
+        function loadAllTranslations() {
+            const urls = [
+                '/admin/jsi18n/?language=fr',
+                '/jsi18n/?language=fr',
+                '/simple-jsi18n/?language=fr'
+            ];
+            
+            urls.forEach(url => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = function() {
+                    console.log(`✅ Загружен: ${url}`);
+                    testTranslations();
+                };
+                script.onerror = function() {
+                    console.log(`❌ Ошибка загрузки: ${url}`);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Автоматический тест при загрузке
+        window.onload = function() {
+            setTimeout(loadAllTranslations, 1000);
+        };
+    </script>
+</head>
+<body>
+    <h1>Debug i18n Loading</h1>
+    <p>Откройте консоль разработчика (F12) чтобы увидеть результаты.</p>
+    
+    <h2>Тестовые кнопки:</h2>
+    <button onclick="testTranslations()">Проверить переводы</button>
+    <button onclick="loadAllTranslations()">Загрузить все переводы</button>
+    
+    <h2>Прямые ссылки для тестирования:</h2>
+    <ul>
+        <li><a href="/admin/jsi18n/?language=fr" target="_blank">/admin/jsi18n/?language=fr</a></li>
+        <li><a href="/jsi18n/?language=fr" target="_blank">/jsi18n/?language=fr</a></li>
+        <li><a href="/simple-jsi18n/?language=fr" target="_blank">/simple-jsi18n/?language=fr</a></li>
+    </ul>
+    
+    <h2>Проверка админки:</h2>
+    <p><a href="/admin/?language=fr" target="_blank">Админка на французском</a></p>
+    
+    <hr>
+    <h2>Тестирование final test:</h2>
+    <p><a href="/final-test/" target="_blank">Запустить final test</a></p>
+</body>
+</html>

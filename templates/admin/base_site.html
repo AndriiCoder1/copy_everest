@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block nav-global %}{{ block.super }}{% endblock %}
+
+{% block userlinks %}
+    <!-- 1. Стандартные ссылки (вручную, БЕЗ Deconnexion) -->
+    {% if site_url %}
+        <a href="{{ site_url }}">{% translate 'View site' %}</a> /
+    {% endif %}
+    
+    {% if user.is_active and user.is_staff %}
+        {% url 'django-admindocs-docroot' as docsroot %}
+        {% if docsroot %}
+            <a href="{{ docsroot }}">{% translate 'Documentation' %}</a> /
+        {% endif %}
+    {% endif %}
+    
+    {% if user.has_usable_password %}
+        <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a> /
+    {% endif %}
+    
+    <!-- 2. Переключатель тем -->
+    <button class="theme-toggle" aria-label="{% translate 'Toggle theme' %}" style="background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
+        <svg class="theme-icon-when-auto"><use href="#icon-auto"></use></svg>
+        <svg class="theme-icon-when-dark"><use href="#icon-moon"></use></svg>
+        <svg class="theme-icon-when-light"><use href="#icon-sun"></use></svg>
+    </button> /
+    
+    <!-- 3. ТОЛЬКО ваша кастомная кнопка выхода -->
+    <form id="logout-form" action="{% url 'admin:logout' %}" method="post" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" style="background:none; border:none; padding:0; color:var(--header-link-color); cursor:pointer; text-decoration:underline; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+            {% translate 'Log out' %}
+        </button>
+    </form>
+{% endblock %}
