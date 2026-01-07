@@ -89,7 +89,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 LANGUAGE_CODE = 'en'  
 TIME_ZONE = 'UTC'
