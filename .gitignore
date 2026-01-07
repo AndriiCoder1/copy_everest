@@ -272,3 +272,5 @@ test_load.py
 test_middleware_perf.py
 test_middleware.py
 test_simple.py
+test_scalability_fixed.py
+
