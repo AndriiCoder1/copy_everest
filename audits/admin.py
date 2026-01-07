@@ -33,8 +33,8 @@ class AuditLogAdmin(admin.ModelAdmin):
         partner = partner_user.partner
         
         # ДЛЯ ОТЛАДКИ: выводим в консоль информацию о партнёре
-        print(f"\n=== DEBUG: AuditLogAdmin.get_queryset ===")
-        print(f"Partner: {partner.name} (ID: {partner.id})")
+        #print(f"\n=== DEBUG: AuditLogAdmin.get_queryset ===")
+        #print(f"Partner: {partner.name} (ID: {partner.id})")
         
         # Импортируем модели (делаем это здесь, чтобы избежать циклических импортов)
         from memorials.models import Memorial
@@ -57,9 +57,9 @@ class AuditLogAdmin(admin.ModelAdmin):
         ).values_list('id', flat=True))
         
         # ДЛЯ ОТЛАДКИ: выводим списки ID
-        print(f"Memorial IDs: {partner_memorial_ids}")
-        print(f"Media IDs: {partner_media_ids}")
-        print(f"Tribute IDs: {partner_tribute_ids}")
+        #print(f"Memorial IDs: {partner_memorial_ids}")
+        #print(f"Media IDs: {partner_media_ids}")
+        #print(f"Tribute IDs: {partner_tribute_ids}")
         
         # Строим комбинированный фильтр, но только для непустых списков
         q_objects = Q()
@@ -75,8 +75,8 @@ class AuditLogAdmin(admin.ModelAdmin):
         
         # Если ни одного условия не добавлено, значит у партнёра нет объектов
         if q_objects == Q():
-            print("DEBUG: Partner has no objects, returning empty queryset")
+            #print("DEBUG: Partner has no objects, returning empty queryset")
             return qs.none()
         
-        print(f"DEBUG: Applying filter: {q_objects}")
+        #print(f"DEBUG: Applying filter: {q_objects}")
         return qs.filter(q_objects)

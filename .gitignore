@@ -265,3 +265,10 @@ fr.txt
 everest_urls.py.txt
 de.txt
 =5.2.9
+create_test_data.py.txt
+run_waitress.py
+test_integration.py
+test_load.py
+test_middleware_perf.py
+test_middleware.py
+test_simple.py

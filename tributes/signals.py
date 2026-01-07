@@ -9,7 +9,7 @@ from .models import Tribute
 def send_tribute_notification(sender, instance, created, **kwargs):
     """Отправляет уведомление семье о новом трибуте"""
     if created and instance.status == 'pending':
-        print(f"=== SIGNAL: New tribute {instance.id} for memorial {instance.memorial.short_code}")
+        #print(f"=== SIGNAL: New tribute {instance.id} for memorial {instance.memorial.short_code}")
         
         memorial = instance.memorial
         
@@ -19,12 +19,12 @@ def send_tribute_notification(sender, instance, created, **kwargs):
             expires_at__gt=timezone.now()      # Срок действия не истёк
         )
         
-        print(f"DEBUG: Found {invites.count()} active invites for memorial {memorial.short_code}")
+        #print(f"DEBUG: Found {invites.count()} active invites for memorial {memorial.short_code}")
         
         if invites.count() == 0:
-            print(f"WARNING: No active invites found for memorial {memorial.short_code}")
-            print(f"  Memorial: {memorial.short_code}, Status: {memorial.status}")
-        
+            #print(f"WARNING: No active invites found for memorial {memorial.short_code}")
+            #print(f"  Memorial: {memorial.short_code}, Status: {memorial.status}")
+            return       
         for invite in invites:
             subject = f'Новое соболезнование для мемориала {memorial.first_name} {memorial.last_name}'
             message = f'''
@@ -37,12 +37,12 @@ def send_tribute_notification(sender, instance, created, **kwargs):
 http://172.20.10.4:8000/memorials/{memorial.short_code}/moderate/?token={invite.token}
 '''
             
-            try:
+            #try:
                 # Для тестирования выводим в консоль
-                print(f"EMAIL NOTIFICATION would be sent to: {invite.email}")
-                print(f"Subject: {subject}")
-                print(f"Message: {message[:100]}...")
-                print("-" * 50)
+                #print(f"EMAIL NOTIFICATION would be sent to: {invite.email}")
+                #print(f"Subject: {subject}")
+                #print(f"Message: {message[:100]}...")
+                #print("-" * 50)
                 
                 # Раскомментируйте для реальной отправки, когда настроите SMTP:
                 # send_mail(
@@ -53,5 +53,6 @@ http://172.20.10.4:8000/memorials/{memorial.short_code}/moderate/?token={invite.
                 #     fail_silently=True
                 # )
                 
-            except Exception as e:
-                print(f"ERROR sending email: {e}")
+            #except Exception as e:
+                #print(f"ERROR sending email: {e}")
+                #pass

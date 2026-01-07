@@ -28,13 +28,12 @@ INSTALLED_APPS = [
     'audits.apps.AuditsConfig',
 ]
 
-# ИСПРАВЛЕНО: Один раз определяем MIDDLEWARE, уже без csrf
+#Стандартный порядок middleware для Django i18n
 MIDDLEWARE = [
-    #'everest.middleware.DebugLocaleMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'everest.middleware.ForceLanguageMiddleware',
+    #'everest.middleware.QueryParamLanguageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
@@ -43,9 +42,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
     'audits.middleware.AuditMiddleware',
-    'everest.middleware.ForceJSI18nMiddleware',
     'everest.middleware.DisableCSRFMiddleware',
-      
 ]
 
 ROOT_URLCONF = 'everest.urls'
@@ -90,14 +87,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher']
 
 
-LANGUAGE_CODE = 'de'  
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+LANGUAGE_CODE = 'en'  
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+# Cookie settings
+LANGUAGE_COOKIE_NAME = 'django_language'
+LANGUAGE_COOKIE_AGE = 365 * 24 * 60 * 60
+LANGUAGE_COOKIE_PATH = '/'
+LANGUAGE_COOKIE_DOMAIN = None
+LANGUAGE_COOKIE_SECURE = False
+LANGUAGE_COOKIE_HTTPONLY = False
+LANGUAGE_COOKIE_SAMESITE = 'Lax'
 
 LANGUAGES = [
     ('de', 'Deutsch'),
@@ -157,13 +164,17 @@ CSRF_COOKIE_HTTPONLY = False
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@everest.com'
 
-# Принудительный сброс кэша переводов при старте
-import django.utils.translation
-import django.utils.translation.trans_real as trans_real
 
-# Сбрасываем кэш при запуске
-django.utils.translation._translations = {}
-trans_real._translations = {}
-
-print("=== ПЕРЕВОДЫ: Кэш сброшен при запуске ===")
 LOGIN_URL = '/admin/login/'
+
+# Настройки кэширования и сжатия статики
+if not DEBUG:
+    # Кэширование статики
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+    
+    # Сжатие статики
+    STATICFILES_FINDERS = [
+        'django.contrib.staticfiles.finders.FileSystemFinder',
+        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+        'compressor.finders.CompressorFinder',  
+    ]

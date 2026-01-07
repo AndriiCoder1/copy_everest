@@ -72,7 +72,7 @@ def log_memorial_change(sender, instance, created, **kwargs):
 # Логирование создания и модерации тributes
 @receiver(post_save, sender=Tribute)
 def log_tribute_approval(sender, instance, created, **kwargs):
-    print(f"=== AUDIT DEBUG: Tribute post_save signal fired. Created: {created}, ID: {instance.id}, Sender: {sender} ===")
+    #print(f"=== AUDIT DEBUG: Tribute post_save signal fired. Created: {created}, ID: {instance.id}, Sender: {sender} ===")
     actor_type, actor_id = _get_actor_info()
     
     # 1. ЛОГИРОВАНИЕ СОЗДАНИЯ НОВОГО ТРИБУТА
@@ -115,13 +115,13 @@ def log_tribute_approval(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=MediaAsset)
 def log_media_access(sender, instance, created, **kwargs):
-    print(f"=== DEBUG: MediaAsset post_save signal fired. Created: {created}, ID: {instance.id} ===")
-    print(f"=== DEBUG: Memorial ID from instance: {instance.memorial.id} ===")
+    #print(f"=== DEBUG: MediaAsset post_save signal fired. Created: {created}, ID: {instance.id} ===")
+    #print(f"=== DEBUG: Memorial ID from instance: {instance.memorial.id} ===")
 
     if created:
         # 1. ПОЛУЧАЕМ АКТОРА
         actor_type, actor_id = _get_actor_info()
-        print(f"=== DEBUG: Actor determined. Type: {actor_type}, ID: {actor_id} ===")
+        #print(f"=== DEBUG: Actor determined. Type: {actor_type}, ID: {actor_id} ===")
 
         # 2. ПОДГОТАВЛИВАЕМ МЕТАДАННЫЕ
         metadata = {
@@ -130,7 +130,7 @@ def log_media_access(sender, instance, created, **kwargs):
             'file_size': instance.size_bytes,
             'gdpr_relevant': True
         }
-        print(f"=== DEBUG: Metadata prepared: {metadata} ===")
+        #print(f"=== DEBUG: Metadata prepared: {metadata} ===")
 
         # 3. ПЫТАЕМСЯ СОЗДАТЬ ЗАПИСЬ С ОБРАБОТКОЙ ОШИБОК
         try:
@@ -142,9 +142,9 @@ def log_media_access(sender, instance, created, **kwargs):
                 target_id=instance.id,
                 metadata=metadata
             )
-            print(f"✅ SUCCESS: AuditLog record created with ID: {log_entry.id}")
+            #print(f"✅ SUCCESS: AuditLog record created with ID: {log_entry.id}")
         except Exception as e:
             # Эта строка покажет, что именно пошло не так
-            print(f"❌ ERROR: Failed to create AuditLog. Exception: {e}")
+            #print(f"❌ ERROR: Failed to create AuditLog. Exception: {e}")
             import traceback
             traceback.print_exc() 
