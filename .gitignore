@@ -274,3 +274,5 @@ test_middleware.py
 test_simple.py
 test_scalability_fixed.py
 
+заметки/check_translations.py
+заметки/fix_translations.py
