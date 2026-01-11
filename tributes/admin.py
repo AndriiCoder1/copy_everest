@@ -181,7 +181,7 @@ class TributeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
             if change:
                 obj.status = Tribute.objects.get(pk=obj.pk).status
             else:
-                obj.status = 'pending'  # Все новые трибьюты от партнеров — на модерации
+                obj.status = 'pending' 
         elif not change and not request.user.is_superuser:
             # Для новых трибьютов от партнеров (если статус не менялся явно)
             obj.status = 'pending'        

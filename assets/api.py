@@ -7,13 +7,13 @@ from django.db import transaction
 from django.db.models import F
 from django.core.files.storage import default_storage
 import hashlib
-
 from everest.permissions import IsPartnerOrFamily, get_partner_user
 from memorials.models import Memorial
 from .models import MediaAsset
 
 ALLOWED_MIME = {'image/jpeg','image/png','image/webp','application/pdf'}
 
+# API для загрузки медиафайлов (фотографий, видео)
 class MediaUpload(APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [IsPartnerOrFamily]
@@ -64,7 +64,7 @@ class MediaUpload(APIView):
             memorial = get_object_or_404(
                 Memorial, 
                 pk=memorial_id,
-                partner=partner_user.partner  # Filter by partner
+                partner=partner_user.partner  
             )
             return memorial
         
@@ -82,7 +82,7 @@ class MediaUpload(APIView):
             {'detail': 'No access rights'}, 
             status=status.HTTP_403_FORBIDDEN
         )
-
+# API для получения списка медиафайлов мемориала
 class MediaList(APIView):
     authentication_classes = []
     permission_classes = []
@@ -98,7 +98,7 @@ class MediaList(APIView):
             'original_filename': a.original_filename
         } for a in qs]
         return Response(data)
-
+# API для удаления медиафайла
 class MediaDelete(APIView):
     permission_classes = [IsPartnerOrFamily]
     

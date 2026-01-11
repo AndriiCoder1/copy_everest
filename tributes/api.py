@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-
 from everest.permissions import IsPartnerOrFamily, get_partner_user
 from memorials.models import Memorial
 from .models import Tribute
@@ -93,7 +92,7 @@ class TributeReject(APIView):
             memorial = get_object_or_404(
                 Memorial, 
                 pk=memorial_id,
-                partner=partner_user.partner  # ← КРИТИЧЕСКО ВАЖНО!
+                partner=partner_user.partner 
             )
             return memorial
         

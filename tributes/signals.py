@@ -5,9 +5,10 @@ from django.conf import settings
 from django.utils import timezone
 from .models import Tribute
 
+# Сигнал для отправки уведомления о новом трибиту
 @receiver(post_save, sender=Tribute)
 def send_tribute_notification(sender, instance, created, **kwargs):
-    """Отправляет уведомление семье о новом трибуте"""
+    """Sends notification to family about new tribute""" 
     if created and instance.status == 'pending':
         #print(f"=== SIGNAL: New tribute {instance.id} for memorial {instance.memorial.short_code}")
         
@@ -15,8 +16,8 @@ def send_tribute_notification(sender, instance, created, **kwargs):
         
         # Используем правильное имя связи: invites (как указано в related_name)
         invites = memorial.invites.filter(
-            consumed_at__isnull=True,          # Приглашение не использовано
-            expires_at__gt=timezone.now()      # Срок действия не истёк
+            consumed_at__isnull=True,          
+            expires_at__gt=timezone.now()      
         )
         
         #print(f"DEBUG: Found {invites.count()} active invites for memorial {memorial.short_code}")
@@ -26,14 +27,14 @@ def send_tribute_notification(sender, instance, created, **kwargs):
             #print(f"  Memorial: {memorial.short_code}, Status: {memorial.status}")
             return       
         for invite in invites:
-            subject = f'Новое соболезнование для мемориала {memorial.first_name} {memorial.last_name}'
+            subject = f'New tribute for memorial {memorial.first_name} {memorial.last_name}' 
             message = f'''
-Поступило новое соболезнование на мемориал {memorial.first_name} {memorial.last_name}.
+New tribute for memorial {memorial.first_name} {memorial.last_name}.
 
-Автор: {instance.author_name}
-Сообщение: {instance.text[:200]}...
+Author: {instance.author_name}
+Message: {instance.text[:200]}...
 
-Для модерации перейдите по ссылке:
+To moderate, go to:
 http://172.20.10.4:8000/memorials/{memorial.short_code}/moderate/?token={invite.token}
 '''
             

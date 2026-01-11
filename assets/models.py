@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+# Модель для хранения медиафайлов (фотографий, видео)
 class MediaAsset(models.Model):
     memorial = models.ForeignKey('memorials.Memorial', on_delete=models.CASCADE, related_name='assets')
     kind = models.CharField(max_length=16)
@@ -24,6 +25,7 @@ class MediaAsset(models.Model):
     def __str__(self):
         return f"{self.original_filename or self.file.name}"
 
+# Модель для хранения миниатюр медиафайлов
 class MediaThumbnail(models.Model):
     asset = models.ForeignKey(MediaAsset, on_delete=models.CASCADE, related_name='thumbnails')
     preset = models.CharField(max_length=16)

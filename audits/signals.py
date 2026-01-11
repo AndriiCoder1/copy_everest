@@ -7,6 +7,7 @@ from tributes.models import Tribute
 from assets.models import MediaAsset
 from .middleware import get_current_user
 
+# ЛОГИРОВАНИЕ АКТИВНОСТИ ПОЛЬЗОВАТЕЛЕЙ
 def _get_actor_info():
     """Gets information about an actor from the current user"""
     from partners.models import PartnerUser
@@ -35,6 +36,7 @@ def _get_actor_info():
     
     return actor_type, actor_id
 
+# ЛОГИРОВАНИЕ СОЗДАНИЯ И МОДИФИКАЦИИ МЕМОРИАЛОВ
 @receiver(post_save, sender=Memorial)
 def log_memorial_change(sender, instance, created, **kwargs):
     action = 'create' if created else 'update'
@@ -75,7 +77,7 @@ def log_tribute_approval(sender, instance, created, **kwargs):
     #print(f"=== AUDIT DEBUG: Tribute post_save signal fired. Created: {created}, ID: {instance.id}, Sender: {sender} ===")
     actor_type, actor_id = _get_actor_info()
     
-    # 1. ЛОГИРОВАНИЕ СОЗДАНИЯ НОВОГО ТРИБУТА
+    # ЛОГИРОВАНИЕ СОЗДАНИЯ НОВОГО ТРИБУТА
     if created:
         AuditLog.objects.create(
             actor_type=actor_type,
@@ -93,7 +95,7 @@ def log_tribute_approval(sender, instance, created, **kwargs):
         )
         return  
     
-    # 2. ЛОГИРОВАНИЕ МОДЕРАЦИИ (одобрение/отклонение) 
+    # ЛОГИРОВАНИЕ МОДЕРАЦИИ (одобрение/отклонение) 
     if instance.tracker.has_changed('is_approved'):
         # Если актор - system (не аутентифицирован), возможно, это семья через токен
         if actor_type == 'system' and hasattr(instance, 'moderated_by_family'):
@@ -112,18 +114,18 @@ def log_tribute_approval(sender, instance, created, **kwargs):
                 'gdpr_relevant': True
             }
         )
-
+# ЛОГИРОВАНИЕ ДОСТУПА К МЕДИА-АСЕТУ
 @receiver(post_save, sender=MediaAsset)
 def log_media_access(sender, instance, created, **kwargs):
     #print(f"=== DEBUG: MediaAsset post_save signal fired. Created: {created}, ID: {instance.id} ===")
     #print(f"=== DEBUG: Memorial ID from instance: {instance.memorial.id} ===")
 
     if created:
-        # 1. ПОЛУЧАЕМ АКТОРА
+        # ПОЛУЧАЕМ АКТОРА
         actor_type, actor_id = _get_actor_info()
         #print(f"=== DEBUG: Actor determined. Type: {actor_type}, ID: {actor_id} ===")
 
-        # 2. ПОДГОТАВЛИВАЕМ МЕТАДАННЫЕ
+        # ПОДГОТАВЛИВАЕМ МЕТАДАННЫЕ
         metadata = {
             'memorial_id': instance.memorial.id,
             'file_type': instance.kind,
@@ -132,7 +134,7 @@ def log_media_access(sender, instance, created, **kwargs):
         }
         #print(f"=== DEBUG: Metadata prepared: {metadata} ===")
 
-        # 3. ПЫТАЕМСЯ СОЗДАТЬ ЗАПИСЬ С ОБРАБОТКОЙ ОШИБОК
+        # ПЫТАЕМСЯ СОЗДАТЬ ЗАПИСЬ С ОБРАБОТКОЙ ОШИБОК
         try:
             log_entry = AuditLog.objects.create(
                 actor_type=actor_type,

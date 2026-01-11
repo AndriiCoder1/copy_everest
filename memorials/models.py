@@ -2,6 +2,7 @@ from django.db import models
 from model_utils import FieldTracker
 from django.utils.translation import gettext_lazy as _
 
+# ===== МОДЕЛЬ МЕМОРИАЛА =====
 class Memorial(models.Model):
     partner = models.ForeignKey('partners.Partner', on_delete=models.CASCADE, related_name='memorials')
     first_name = models.CharField(max_length=120)
@@ -43,7 +44,7 @@ class Memorial(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['partner','created_at']),
         ]
-
+# ===== МОДЕЛЬ ПРИГЛАШЕНИЯ ДЛЯ СЕМЬИ =====
 class FamilyInvite(models.Model):
     memorial = models.ForeignKey(Memorial, on_delete=models.CASCADE, related_name='invites')
     email = models.EmailField()

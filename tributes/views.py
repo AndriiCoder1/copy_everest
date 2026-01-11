@@ -1,22 +1,22 @@
-from django.shortcuts import render, get_object_or_404, redirect  # <-- Добавьте 'redirect' в импорт
-from django.utils import timezone  # <-- Добавьте этот импорт для работы с датами
+from django.shortcuts import render, get_object_or_404, redirect  
+from django.utils import timezone  
 from memorials.models import FamilyInvite
 from .models import Tribute
 
 def family_moderation_view(request, short_code):
-    """Страница модерации трибьютов для семьи"""
+    """Family tribute moderation page"""
     token = request.GET.get('token')
     
     if not token:
-        return render(request, 'tributes/error.html', {'error': 'Требуется токен доступа'})
+        return render(request, 'tributes/error.html', {'error': 'Token is required'})
     
-    # Проверяем токен - ИСПРАВЛЕННАЯ СТРОКА:
+    # Проверяем токен 
     try:
         # Ищем приглашение, которое еще не использовано и не просрочено
         invite = FamilyInvite.objects.get(
             token=token,
-            consumed_at__isnull=True,          # Приглашение еще не использовано
-            expires_at__gt=timezone.now()      # Срок действия еще не истек
+            consumed_at__isnull=True,          
+            expires_at__gt=timezone.now()      
         )
         memorial = invite.memorial
         
