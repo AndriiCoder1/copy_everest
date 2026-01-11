@@ -7,14 +7,14 @@ from django.contrib import messages
 from .models import Partner, PartnerUser
 from django.utils.translation import gettext_lazy as _
 
-# 1. Proxy модель для безопасного отображения
+# Proxy модель для безопасного отображения
 class PartnerUserProxy(PartnerUser):
     class Meta:
         proxy = True
         verbose_name = 'Partner User'
         verbose_name_plural = 'Partner Users'
 
-# 2. Форма без поля partner
+# Форма без поля partner
 class PartnerUserForm(forms.ModelForm):
     password1 = forms.CharField(
         label="Password",
@@ -69,7 +69,7 @@ class PartnerUserForm(forms.ModelForm):
                 raise ValidationError({'password1': "Password must be at least 8 characters"})
         return cleaned_data
 
-# 3. Админка для Partner
+# Админка для Partner
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'billing_email', 'created_at')
@@ -88,7 +88,7 @@ class PartnerAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return request.user.is_superuser
 
-# 4. Админка для PartnerUserProxy
+# Админка для PartnerUserProxy
 @admin.register(PartnerUserProxy)
 class PartnerUserAdmin(admin.ModelAdmin):
     form = PartnerUserForm
@@ -130,15 +130,15 @@ class PartnerUserAdmin(admin.ModelAdmin):
         Automatically create a User when creating a PartnerUser  
         """
     
-        # 1. Если это создание нового PartnerUser (не редактирование)
+        # Если это создание нового PartnerUser (не редактирование)
         if not change:
-            # 2. Если создатель - суперадмин
+            # Если создатель - суперадмин
             if request.user.is_superuser:
                 # Суперадмин должен был выбрать партнера в форме
                 if not obj.partner:
                     raise ValidationError("Partner must be selected when creating user as superadmin.")
         
-            # 3. Если создатель - партнер-админ
+            # Если создатель - партнер-админ
             else:
                 try:
                     # Находим профиль создателя
@@ -148,10 +148,10 @@ class PartnerUserAdmin(admin.ModelAdmin):
                     # Если у создателя нет профиля, ошибка
                     raise ValidationError("Cannot create user: your partner profile not found.")
     
-        # 4. Сохраняем PartnerUser (это создаст запись в partners_partneruser)
+        # Сохраняем PartnerUser (это создаст запись в partners_partneruser)
         super().save_model(request, obj, form, change)
     
-        # 5. Теперь создаем/обновляем User Django
+        # Теперь создаем/обновляем User Django
         email = obj.email
         password = form.cleaned_data.get('password1') if hasattr(form, 'cleaned_data') else None
     

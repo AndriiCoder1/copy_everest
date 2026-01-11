@@ -3,6 +3,7 @@ from .models import AuditLog
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+# Регистрация модели аудита в админке
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'actor_display', 'target_type', 'target_id', 'created_at')
@@ -41,17 +42,17 @@ class AuditLogAdmin(admin.ModelAdmin):
         from assets.models import MediaAsset
         from tributes.models import Tribute
         
-        # 1. Получаем ID всех мемориалов этого партнёра
+        # Получаем ID всех мемориалов этого партнёра
         partner_memorial_ids = list(Memorial.objects.filter(
             partner=partner
         ).values_list('id', flat=True))
         
-        # 2. Получаем ID всех медиафайлов этого партнёра
+        # Получаем ID всех медиафайлов этого партнёра
         partner_media_ids = list(MediaAsset.objects.filter(
             memorial__partner=partner
         ).values_list('id', flat=True))
         
-        # 3. Получаем ID всех трибутов этого партнёра
+        # Получаем ID всех трибутов этого партнёра
         partner_tribute_ids = list(Tribute.objects.filter(
             memorial__partner=partner
         ).values_list('id', flat=True))

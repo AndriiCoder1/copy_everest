@@ -8,7 +8,6 @@ from django.utils.text import slugify
 from django.core.files.base import ContentFile
 from io import BytesIO
 import segno
-
 from .models import Memorial, FamilyInvite
 from .serializers import MemorialCreateSerializer, FamilyInviteCreateSerializer, MemorialPublicSerializer
 from .utils import generate_short_code
@@ -30,7 +29,7 @@ class MemorialCreate(APIView):
         slug = slugify(f"{data.get('first_name','')}-{data.get('last_name','')}-{short_code}")[:64]
         
         memorial = Memorial.objects.create(
-            partner=partner_user.partner,  # Автоматически назначаем партнера
+            partner=partner_user.partner,  
             first_name=data['first_name'],
             last_name=data['last_name'],
             birth_date=data.get('birth_date'),
@@ -117,7 +116,7 @@ class FamilyInviteCreate(APIView):
         memorial = get_object_or_404(
             Memorial, 
             pk=memorial_id,
-            partner=partner_user.partner  # ← КРИТИЧЕСКО ВАЖНО!
+            partner=partner_user.partner 
         )
         
         serializer = FamilyInviteCreateSerializer(data=request.data)

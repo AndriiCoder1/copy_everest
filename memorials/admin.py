@@ -114,7 +114,8 @@ class MemorialRelatedAdminMixin:
                     )
         
         super().save_model(request, obj, form, change)
-
+        
+# Администрирование мемориалов
 @admin.register(Memorial)
 class MemorialAdmin(admin.ModelAdmin):
     list_display = ('id','partner','last_name','status','short_code','storage_bytes_used','storage_bytes_limit', 'public_qr_link', 'family_invite_info')  
@@ -162,7 +163,7 @@ class MemorialAdmin(admin.ModelAdmin):
         )
     family_invite_info.short_description = "Family Access Info"
 
-    # 1. Фильтрация мемориалов
+    # Фильтрация мемориалов
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
@@ -174,7 +175,7 @@ class MemorialAdmin(admin.ModelAdmin):
         except PartnerUser.DoesNotExist:
             return qs.none()
     
-    # 2. Фильтрация выпадающего списка партнеров
+    # Фильтрация выпадающего списка партнеров
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         
@@ -192,7 +193,7 @@ class MemorialAdmin(admin.ModelAdmin):
         return form
 
 
-
+# Администрирование приглашений семьи
 @admin.register(FamilyInvite)
 class FamilyInviteAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
     list_display = ('id', 'memorial', 'email', 'expires_at', 'consumed_at')
@@ -210,6 +211,7 @@ class FamilyInviteAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
         except PartnerUser.DoesNotExist:
             return qs.none()
 
+# Администрирование переопределений языков
 @admin.register(LanguageOverride)
 class LanguageOverrideAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
     list_display = ('id', 'memorial', 'language_code', 'created_at')
@@ -227,7 +229,7 @@ class LanguageOverrideAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
         except PartnerUser.DoesNotExist:
             return qs.none()
 
-
+# Администрирование медиа-асетов
 @admin.register(MediaAsset)
 class MediaAssetAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
     list_display = ('id', 'memorial', 'get_kind_display', 'file_size_display', 'is_public', 'created_at')
@@ -316,6 +318,7 @@ class QRCodeAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
         # Затем вызываем save_model миксина
         super().save_model(request, obj, form, change)
 
+# Администрирование миниатюр медиа-асетов
 @admin.register(MediaThumbnail)
 class MediaThumbnailAdmin(admin.ModelAdmin):
     list_display = ('id', 'asset', 'get_preset_display', 'size_bytes_display')

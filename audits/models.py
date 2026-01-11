@@ -3,6 +3,7 @@ from partners.models import PartnerUser
 from django.contrib.auth.models import User 
 from django.utils.translation import gettext_lazy as _
 
+# Модель для хранения аудита действий пользователей
 class AuditLog(models.Model):
     actor_type = models.CharField(max_length=24)
     actor_id = models.BigIntegerField()
@@ -19,7 +20,7 @@ class AuditLog(models.Model):
             models.Index(fields=['created_at']),
         ]
         
-        
+    # Метод для отображения актора в админке
     def get_actor_display(self):
         """Returns a readable representation of the actor for the admin panel.""" 
         try:

@@ -15,7 +15,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-
+# Сигнал для генерации QR-кода при активации мемориала
 @receiver(post_save, sender=Memorial)
 def generate_qr_on_activation(sender, instance, created, **kwargs):
     """
