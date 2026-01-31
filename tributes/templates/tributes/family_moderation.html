@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Family Tribute Moderation - {{ memorial.title }}</title>
+    <title>Family Tribute Moderation - {{ memorial.first_name }} {{ memorial.last_name }}</title>
     <style>
         .tribute { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
         .pending { background-color: #fff3cd; border-color: #ffeaa7; }
@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>Family Tribute Moderation - {{ memorial.title }}</h1>
+    <h1>Family Tribute Moderation - {{ memorial.first_name }} {{ memorial.last_name }}</h1>
     
     <h2>Pending Tributes ({{ pending_tributes|length }})</h2>
     {% for tribute in pending_tributes %}

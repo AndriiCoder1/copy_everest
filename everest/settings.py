@@ -9,6 +9,7 @@ BASE_URL = 'http://172.20.10.4:8000'
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'change-me')
 DEBUG = True
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.20.10.4,0.0.0.0,testserver').split(',')
+APPEND_SLASH = True 
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -33,15 +34,14 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    #'everest.middleware.QueryParamLanguageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'audits.middleware.AuditMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware', 
     'django_prometheus.middleware.PrometheusAfterMiddleware',
-    'audits.middleware.AuditMiddleware',
     'everest.middleware.DisableCSRFMiddleware',
 ]
 
@@ -77,8 +77,17 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache', 
+        'LOCATION': 'unique-snowflake',
     }
 }
+
+# Или для Redis (рекомендуется для продакшена):
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -160,9 +169,14 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False 
 
 # === EMAIL SETTINGS ===
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@everest.com'
-
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'  # или другой SMTP сервер
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+#EMAIL_HOST_USER = 'your-email@gmail.com'
+#EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'noreply@everest-dev.local'
 
 LOGIN_URL = '/admin/login/'
 

@@ -1,6 +1,9 @@
 from django.db import models
 from model_utils import FieldTracker
 from django.utils.translation import gettext_lazy as _
+import secrets
+from django.utils import timezone
+from django.conf import settings
 
 # ===== МОДЕЛЬ МЕМОРИАЛА =====
 class Memorial(models.Model):
@@ -57,12 +60,22 @@ class FamilyInvite(models.Model):
         verbose_name_plural = _('Family Invites')
         indexes = [models.Index(fields=['memorial','expires_at'])]
 
-    def __str__(self):
-        # Показываем email и связанный мемориал
-        memorial_info = f"Memorial #{self.memorial.id}"
-        if hasattr(self.memorial, 'short_code'):
-            memorial_info = self.memorial.short_code
-        return f"Invite for {self.email} ({memorial_info})"    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        # Автогенерация токена при создании
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+        
+        # Устанавливаем expires_at, если не установлен
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timezone.timedelta(days=90)
+        
+        super().save(*args, **kwargs)
+        
+    def get_family_url(self):
+        """Returns family URL only if requested by the admin (for viewing)"""
+        # Can show only truncated version
+        return f"/memorials/{self.memorial.short_code}/family/?token=••••••••"
 
 
 class LanguageOverride(models.Model):

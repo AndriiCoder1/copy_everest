@@ -2,9 +2,11 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
 from .models import AuditLog
-from memorials.models import Memorial
+from memorials.models import Memorial, FamilyInvite
 from tributes.models import Tribute
 from assets.models import MediaAsset
+from .middleware import get_current_user, get_request_context, get_family_token
+from django.utils import timezone
 from .middleware import get_current_user
 
 # ЛОГИРОВАНИЕ АКТИВНОСТИ ПОЛЬЗОВАТЕЛЕЙ
@@ -36,70 +38,101 @@ def _get_actor_info():
     
     return actor_type, actor_id
 
-# ЛОГИРОВАНИЕ СОЗДАНИЯ И МОДИФИКАЦИИ МЕМОРИАЛОВ
-@receiver(post_save, sender=Memorial)
-def log_memorial_change(sender, instance, created, **kwargs):
-    action = 'create' if created else 'update'
-    
-    # Логируем только важные поля для GDPR
-    gdpr_fields_changed = False
-    if not created and hasattr(instance, '_changed_fields'):
-        # Проверяем, изменились ли персональные данные
-        sensitive_fields = ['first_name', 'last_name', 'biography', 'date_of_birth', 'date_of_death']
-        if any(field in instance._changed_fields for field in sensitive_fields):
-            gdpr_fields_changed = True
-    
-    if created or gdpr_fields_changed:
-        # Определяем actor (кто изменил)
-        actor_type, actor_id = _get_actor_info()
-     
-        
-        # Здесь нужно определить, кто совершил действие (через request или контекст)
-        # Можно использовать threading.local или middleware
-        
-        AuditLog.objects.create(
-            actor_type=actor_type,
-            actor_id=actor_id,
-            action=action,
-            target_type='memorial',
-            target_id=instance.id,
-            metadata={
-                'memorial_id': instance.id,
-                'short_code': instance.short_code,
-                'changed_fields': instance._changed_fields if hasattr(instance, '_changed_fields') else None,
-                'gdpr_relevant': True
-            }
-        )
 
-# Логирование создания и модерации тributes
 @receiver(post_save, sender=Tribute)
-def log_tribute_approval(sender, instance, created, **kwargs):
-    #print(f"=== AUDIT DEBUG: Tribute post_save signal fired. Created: {created}, ID: {instance.id}, Sender: {sender} ===")
-    actor_type, actor_id = _get_actor_info()
+def log_tribute_moderation(sender, instance, created, **kwargs):
+    """Логирует создание и модерацию трибьютов"""
+    
+    # ⚠️ СНАЧАЛА ПРОВЕРЯЕМ ФЛАГ - РАННИЙ ВЫХОД ДЛЯ ОПТИМИЗАЦИИ
+    if hasattr(instance, '_skip_audit_log'):
+        # Эта модерация уже залогирована в views.py
+        # Очищаем флаг, чтобы не мешал дальше
+        del instance._skip_audit_log
+        return
+
+    # Получаем контекст
+    context = get_request_context()
     
     # ЛОГИРОВАНИЕ СОЗДАНИЯ НОВОГО ТРИБУТА
     if created:
+        # ⚠️ ВАЖНО: тоже проверяем флаг для создания (на всякий случай)
+        if hasattr(instance, '_skip_audit_log'):
+            del instance._skip_audit_log
+            return
+        actor_type, actor_id = _get_actor_info()
+        metadata = {
+            'memorial_id': instance.memorial.id,
+            'memorial_code': instance.memorial.short_code,
+            'author_name': instance.author_name,
+            'initial_status': 'pending',
+            'gdpr_relevant': True
+        }
+        
+        if context.get('is_family_access'):
+            # Гость через публичный доступ
+            actor_type = 'guest'
+            metadata['access_type'] = 'public'
+            
+        elif context.get('is_partner_access'):
+            # Партнер через админку
+            actor_type, actor_id = _get_actor_info()
+            metadata['access_type'] = 'partner_admin'
+        
         AuditLog.objects.create(
             actor_type=actor_type,
             actor_id=actor_id,
             action='create_tribute',
             target_type='tribute',
             target_id=instance.id,
-            metadata={
-                'memorial_id': instance.memorial.id,
-                'memorial_code': instance.memorial.short_code,
-                'author_name': instance.author_name,
-                'initial_status': 'awaiting_moderation',  
-                'gdpr_relevant': True  
-            }
+            metadata=metadata
         )
-        return  
+        return
     
-    # ЛОГИРОВАНИЕ МОДЕРАЦИИ (одобрение/отклонение) 
-    if instance.tracker.has_changed('is_approved'):
-        # Если актор - system (не аутентифицирован), возможно, это семья через токен
-        if actor_type == 'system' and hasattr(instance, 'moderated_by_family'):
-            actor_type = 'family'
+    # ЛОГИРОВАНИЕ МОДЕРАЦИИ
+    if hasattr(instance, 'tracker') and instance.tracker.has_changed('status'):
+        old_status = instance.tracker.previous('status')
+        new_status = instance.status
+        
+        actor_type, actor_id = _get_actor_info()
+        metadata = {
+            'memorial_id': instance.memorial.id,
+            'memorial_code': instance.memorial.short_code,
+            'old_status': old_status,
+            'new_status': new_status,
+            'gdpr_relevant': True
+        }
+        
+        if context.get('is_family_invite'):
+            # Семья получила приглашение (например, через API)
+            actor_type, actor_id = _get_actor_info()
+            metadata['access_type'] = 'family_invite'
+            
+            family_token = get_family_token()
+            
+            if family_token:
+                # Безопасно логируем (обрезанный токен)
+                safe_token = family_token[:8] + '...' if len(family_token) > 8 else '***'
+                
+                # Пытаемся найти FamilyInvite для деталей
+                try:
+                    invite = FamilyInvite.objects.get(token=family_token)
+                    metadata.update({
+                        'family_invite_id': invite.id,
+                        'family_email': invite.email,
+                        'token_preview': safe_token,
+                    })
+                except FamilyInvite.DoesNotExist:
+                    metadata['token_preview'] = safe_token
+            
+        elif context.get('is_partner_access'):
+            # ПАРТНЕР одобрил через админку
+            actor_type, actor_id = _get_actor_info()
+            metadata['access_type'] = 'partner_admin'
+            
+        elif instance.moderated_by_user:
+            # Партнер через API или другую систему
+            actor_type, actor_id = _get_actor_info()
+            metadata['access_type'] = 'api_or_system'
         
         AuditLog.objects.create(
             actor_type=actor_type,
@@ -107,46 +140,76 @@ def log_tribute_approval(sender, instance, created, **kwargs):
             action='moderate_tribute',
             target_type='tribute',
             target_id=instance.id,
-            metadata={
-                'memorial_id': instance.memorial.id,
-                'old_status': instance.tracker.previous('is_approved'),
-                'new_status': instance.is_approved,
-                'gdpr_relevant': True
-            }
+            metadata=metadata
         )
-# ЛОГИРОВАНИЕ ДОСТУПА К МЕДИА-АСЕТУ
+
+
+@receiver(post_save, sender=Memorial)
+def log_memorial_change(sender, instance, created, **kwargs):
+    """Логирует изменения мемориалов"""
+    action = 'create_memorial' if created else 'update_memorial'
+    
+    context = get_request_context()
+    
+    actor_type, actor_id = _get_actor_info()
+    metadata = {
+        'memorial_id': instance.id,
+        'short_code': instance.short_code,
+    }
+    
+    if context.get('is_partner_access'):
+        actor_type, actor_id = _get_actor_info()
+        metadata['access_type'] = 'partner_admin'
+    
+    AuditLog.objects.create(
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action=action,
+        target_type='memorial',
+        target_id=instance.id,
+        metadata=metadata
+    )
+
+
 @receiver(post_save, sender=MediaAsset)
 def log_media_access(sender, instance, created, **kwargs):
-    #print(f"=== DEBUG: MediaAsset post_save signal fired. Created: {created}, ID: {instance.id} ===")
-    #print(f"=== DEBUG: Memorial ID from instance: {instance.memorial.id} ===")
-
-    if created:
-        # ПОЛУЧАЕМ АКТОРА
+    """Логирует загрузку медиа-файлов"""
+    if not created:
+        return
+    
+    context = get_request_context()
+    
+    actor_type, actor_id = _get_actor_info()
+    metadata = {
+        'memorial_id': instance.memorial.id,
+        'file_type': instance.kind,
+        'file_size': instance.size_bytes,
+        'gdpr_relevant': True
+    }
+    
+    if context.get('is_family_access'):
+        # СЕМЬЯ одобрила через веб-интерфейс
         actor_type, actor_id = _get_actor_info()
-        #print(f"=== DEBUG: Actor determined. Type: {actor_type}, ID: {actor_id} ===")
-
-        # ПОДГОТАВЛИВАЕМ МЕТАДАННЫЕ
-        metadata = {
-            'memorial_id': instance.memorial.id,
-            'file_type': instance.kind,
-            'file_size': instance.size_bytes,
-            'gdpr_relevant': True
-        }
-        #print(f"=== DEBUG: Metadata prepared: {metadata} ===")
-
-        # ПЫТАЕМСЯ СОЗДАТЬ ЗАПИСЬ С ОБРАБОТКОЙ ОШИБОК
-        try:
-            log_entry = AuditLog.objects.create(
-                actor_type=actor_type,
-                actor_id=actor_id,
-                action='upload_media',
-                target_type='media',
-                target_id=instance.id,
-                metadata=metadata
-            )
-            #print(f"✅ SUCCESS: AuditLog record created with ID: {log_entry.id}")
-        except Exception as e:
-            # Эта строка покажет, что именно пошло не так
-            #print(f"❌ ERROR: Failed to create AuditLog. Exception: {e}")
-            import traceback
-            traceback.print_exc() 
+        metadata['access_type'] = 'family_web'
+        
+    elif context.get('is_family_invite'):
+        # Семья получила приглашение
+        actor_type, actor_id = _get_actor_info()
+        metadata['access_type'] = 'family_invite'
+        
+        family_token = get_family_token()
+        if family_token:
+            safe_token = family_token[:8] + '...' if len(family_token) > 8 else '***'
+            metadata['token_preview'] = safe_token
+        
+    elif context.get('is_partner_access'):
+        actor_type, actor_id = _get_actor_info()
+    
+    AuditLog.objects.create(
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action='upload_media',
+        target_type='media',
+        target_id=instance.id,
+        metadata=metadata
+    )

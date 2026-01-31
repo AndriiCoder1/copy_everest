@@ -11,6 +11,9 @@ from assets.models import MediaAsset, MediaThumbnail
 from partners.models import PartnerUser
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ===== БАЗОВЫЙ МИКСИН ДЛЯ ВСЕХ МОДЕЛЕЙ С Memorial =====
 class MemorialRelatedAdminMixin:
@@ -126,43 +129,66 @@ class MemorialAdmin(admin.ModelAdmin):
 
     def public_qr_link(self, obj):
         """Displays a public QR code and link""" 
-        if obj.status == 'active' and hasattr(obj, 'qrcode') and obj.qrcode.qr_png:
-            public_url = f"http://172.20.10.4:8000/m/{obj.short_code}/" 
-            return format_html(
-                '<strong>Public Access (for memorial):</strong><br>'
-                '<img src="{}" style="max-height: 100px; border: 1px solid #ccc;"/><br>'
-                '<small><a href="{}" target="_blank">{}</a></small>',
-                obj.qrcode.qr_png.url,
-                public_url,
-                public_url
-            )
-        return "Memorial is not active or QR code is not created."
+        if obj.status == 'active':
+            # Проверяем, есть ли хотя бы один QRCode у мемориала
+            # Используем exists() для эффективности
+            if obj.qrcodes.exists():
+                first_qr = obj.qrcodes.first()
+                if first_qr and first_qr.qr_png:
+                    public_url = f"http://172.20.10.4:8000/memorials/{obj.short_code}/public/"
+                    return format_html(
+                        '<strong>Public Access:</strong><br>'
+                        '<img src="{}" style="max-height: 100px; border: 1px solid #ccc;"/><br>'
+                        '<small><a href="{}" target="_blank">{}</a></small>',
+                        first_qr.qr_png.url,
+                        public_url,
+                        public_url
+                    )
+            return "QR code is not created."
+        return "Memorial is not active."
     public_qr_link.short_description = "QR for guests"
 
     def family_invite_info(self, obj):
         """Displays information for inviting family and token"""
-        try:
-            # Ищем активное приглашение
-            invite = obj.familyinvite_set.filter(is_active=True).first()
-            if invite:
-                family_url = f"http://172.20.10.4:8000/memorials/{obj.short_code}/moderate/?token={invite.token}"
-                return format_html(
-                    '<strong>Family Access (with token):</strong><br>'
-                    'Link: <a href="{}" target="_blank">{}</a><br>'
-                    'Token: <code>{}</code><br>'
-                    '<small>Send this link to your family. Do not post on the memorial.</small>',
-                    family_url,
-                    "Family moderation link",
-                    invite.token
-                )
-        except Exception:
-            pass
-        return format_html(
-            '<a href="{}">Send invitation to family</a>',
-            reverse('admin:memorials_familyinvite_add') + f'?memorial_id={obj.id}'
-        )
-    family_invite_info.short_description = "Family Access Info"
-
+        # Добавьте декоратор для доступа к request
+        from django.contrib.admin.decorators import display
+    
+        @display(description='Family Access Info')
+        def inner(obj):
+            try:
+                # Используем правильный related_name 'invites' из модели
+                # Ищем активное (не просроченное, не использованное) приглашение
+                from django.utils import timezone
+                active_invite = obj.invites.filter(
+                    expires_at__gt=timezone.now(),
+                    consumed_at__isnull=True
+                ).first()
+            
+                if active_invite:
+                    # Определяем, кто смотрит (суперадмин или партнер)
+                    if hasattr(self, 'request') and self.request.user.is_superuser:
+                        token_display = active_invite.token
+                    else:
+                        token_display = f"{active_invite.token[:8]}••••" if active_invite.token else "—"
+                
+                    return format_html(
+                        '<strong>🔒 Family Access:</strong><br>'
+                        '📧 Email: <code>{}</code><br>'
+                        '🔐 Token: <code>{}</code><br>'
+                        '<small><em>Link sent to family automatically</em></small>',
+                        active_invite.email,
+                        token_display
+                    )
+            except Exception as e:
+                logger.error(f"Error in family_invite_info: {e}")
+        
+            # Если нет активного приглашения, показываем кнопку для создания
+            return format_html(
+                '<a href="{}" class="button">📧 Send invitation to family</a>',
+                reverse('admin:memorials_familyinvite_add') + f'?memorial_id={obj.id}'
+            )
+    
+        return inner(obj)
     # Фильтрация мемориалов
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -196,9 +222,191 @@ class MemorialAdmin(admin.ModelAdmin):
 # Администрирование приглашений семьи
 @admin.register(FamilyInvite)
 class FamilyInviteAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
-    list_display = ('id', 'memorial', 'email', 'expires_at', 'consumed_at')
+    list_display = ('id', 'memorial', 'email', 'expires_at', 'consumed_at', 'token_preview', 'status_display')
     list_filter = ('expires_at', 'consumed_at')
     search_fields = ('email', 'memorial__first_name', 'memorial__last_name')
+    readonly_fields = ('token_preview', 'family_link', 'public_link', 'consumed_at', 'status_display')
+
+    # ⚡ request для использования в методах
+    def get_form(self, request, *args, **kwargs):
+        self.request = request
+        return super().get_form(request, *args, **kwargs)
+
+    # Методы для отображения
+    def token_preview(self, obj):
+        """Displays only the beginning of the token for security"""
+        if obj.token:
+            # Для суперадмина - полный токен
+            if hasattr(self, 'request') and self.request.user.is_superuser:
+                return obj.token
+            # Для остальных - обрезанный
+            return f"{obj.token[:8]}••••"
+        return "—"
+    token_preview.short_description = "Token"
+
+    def family_link(self, obj):
+        """Family link - maximally secure"""
+        if not obj.email or not obj.memorial:
+            return "—"
+        
+        
+        # Только для суперадмина - полная информация
+        if hasattr(self, 'request') and self.request.user.is_superuser:
+            family_url = f"http://172.20.10.4:8000/memorials/{obj.memorial.short_code}/family/?token={obj.token}"
+            return format_html(
+                '📧 {}<br>'
+                '🔗 <a href="{}" target="_blank">Open family interface</a><br>'
+                '🔐 Token: <code>{}</code><br>'
+                '<small><em>Link sent to family automatically</em></small>',
+                obj.email,
+                family_url,
+                obj.token
+            )
+    
+        # Для партнеров - минимальная информация
+        
+        return format_html(
+            '📧 {}<br>'
+            '🔗 <em>Link sent to family automatically</em><br>'
+            '🔐 Token: <code>{}</code>',
+            obj.email,
+            f"{obj.token[:8]}••••" if obj.token else "—"
+        )
+    family_link.short_description = "Family link"
+    
+    def public_link(self, obj):
+        """Public link for guests"""
+        if obj.memorial and obj.memorial.short_code:
+            public_url = f"http://172.20.10.4:8000/memorials/{obj.memorial.short_code}/public/"
+            return format_html(
+                '<a href="{}" target="_blank">Open public interface</a>',
+                public_url
+            )
+        return "—"
+    public_link.short_description = "Public link (for QR)"
+    
+    def status_display(self, obj):
+        """Displays invitation status"""
+        from django.utils import timezone
+        
+        if obj.consumed_at:
+            return format_html('<span style="color: red;">❌ Used</span>')
+        elif obj.expires_at and obj.expires_at < timezone.now():
+            return format_html('<span style="color: orange;">⏰ Expired</span>')
+        else:
+            return format_html('<span style="color: green;">✅ Active</span>')
+    status_display.short_description = "Status"
+    
+    def get_fieldsets(self, request, obj=None):
+        """Configures field display - ONLY EXISTING FIELDS"""
+        # Сохраняем request
+        self.request = request
+
+        if obj:  # При редактировании существующего
+            return (
+                    ('Basic information', {
+                    'fields': ('memorial', 'email', 'expires_at')
+                }),
+                ('Family access and links', {
+                    'fields': ('family_link', 'public_link', 'token_preview'),
+                    'classes': ('collapse',)
+                }),
+                ('Status and info', {
+                    'fields': ('status_display', 'consumed_at'),
+                    'classes': ('collapse',)
+                }),
+            )
+        else:  # При создании нового
+            return (
+                ('Basic information', {
+                    'fields': ('memorial', 'email', 'expires_at')
+                }),
+            )
+    
+    def save_model(self, request, obj, form, change):
+        """Sends email to family when saving and logs the action"""
+        from django.conf import settings
+        from django.core.mail import send_mail
+        from django.contrib import messages
+        from audits.models import AuditLog  
+        import secrets  
+        
+        # Сохраняем request
+        self.request = request
+        
+        # Автогенерация токена при создании
+        if not obj.token:
+            obj.token = secrets.token_urlsafe(32)
+        
+        # Вызываем родительский метод
+        super().save_model(request, obj, form, change)
+        
+         # 1. ЛОГИРОВАНИЕ действия
+        try:
+            actor_id = request.user.id if request.user.is_authenticated else None
+            AuditLog.objects.create(
+                actor_type='superuser' if request.user.is_superuser else 'partner_user',
+                actor_id=actor_id,
+                action='create_family_invite',
+                target_type='family_invite',
+                target_id=obj.id,
+                metadata={
+                    'memorial_id': obj.memorial.id,
+                    'memorial_short_code': obj.memorial.short_code,
+                    'family_email': obj.email,
+                    'invited_by': request.user.email if request.user.is_authenticated else 'system',
+                    'token_preview': f"{obj.token[:8]}...",
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to create audit log for invite {obj.id}: {e}")
+    
+        # 2. Отправляем email только при создании (не при изменении)
+        if not change and obj.email and obj.memorial:
+            try:
+                # Формируем ссылки
+                family_url = f"http://172.20.10.4:8000/memorials/{obj.memorial.short_code}/family/?token={obj.token}"
+                public_url = f"http://172.20.10.4:8000/memorials/{obj.memorial.short_code}/public/"
+            
+                # НАЗВАНИЕ МЕМОРИАЛА - используем правильные поля
+                memorial_name = f"{obj.memorial.first_name} {obj.memorial.last_name}"
+            
+                # Отправляем email
+                send_mail(
+                    # ИСПРАВЛЕННАЯ СТРОКА - используем first_name и last_name
+                    subject=f"Family access to memorial {memorial_name}", 
+                    message=f"""
+                    Hello,
+                
+                    You have been invited to manage the memorial "{memorial_name}".
+                
+                    🔒 Edit link (only for family):
+                    {family_url}
+                
+                    🔗 Public link for guests (can be added to QR-code):
+                    {public_url}
+                
+                    ⚠️ Save this link in a secure place.    
+                
+                    With regards,
+                    Everest Team
+                    """,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[obj.email],
+                    fail_silently=False,
+                )
+            
+                # Сообщаем пользователю
+                messages.success(
+                    request, 
+                    f"✅ Invitation sent to {obj.email}"
+                )
+            
+            except Exception as e:
+                messages.warning(
+                    request, 
+                    f"⚠️ Error sending email: {str(e)}. Token saved in system." 
+                )
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -210,7 +418,8 @@ class FamilyInviteAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
             return qs.filter(memorial__partner=partner_user.partner)
         except PartnerUser.DoesNotExist:
             return qs.none()
-
+            
+    
 # Администрирование переопределений языков
 @admin.register(LanguageOverride)
 class LanguageOverrideAdmin(MemorialRelatedAdminMixin, admin.ModelAdmin):
