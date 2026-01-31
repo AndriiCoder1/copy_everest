@@ -23,6 +23,8 @@ class TributeListModeration(APIView):
     permission_classes = [IsPartnerOrFamily]
     
     def get(self, request, memorial_id):
+        print(f"=== DEBUG: TributeListModeration.get() called with memorial_id={memorial_id} ===")
+        print(f"=== DEBUG: Request headers: {dict(request.headers)} ===")
         # Проверяем права на мемориал
         memorial = self._get_memorial_with_permission_check(request, memorial_id)
         if isinstance(memorial, Response):
@@ -32,6 +34,32 @@ class TributeListModeration(APIView):
         qs = Tribute.objects.filter(memorial=memorial, status=status_q).order_by('-created_at')
         data = TributeModerationSerializer(qs, many=True).data
         return Response(data)
+
+    def _get_memorial_with_permission_check(self, request, memorial_id):
+        """Check permissions for accessing a memorial"""
+        # For partner
+        partner_user = get_partner_user(request)
+        if partner_user:
+            memorial = get_object_or_404(
+                Memorial, 
+                pk=memorial_id,
+                partner=partner_user.partner 
+            )
+            return memorial
+        
+        if hasattr(request, 'family_invite'):
+            invite = request.family_invite
+            if invite.memorial.id != int(memorial_id):
+                return Response(
+                    {'detail': 'Token not for this memorial'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            return invite.memorial
+        
+        return Response(
+            {'detail': 'No access rights'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )    
 
 class TributeApprove(APIView):
     permission_classes = [IsPartnerOrFamily]
@@ -59,6 +87,32 @@ class TributeApprove(APIView):
         tribute.save(update_fields=['status','approved_at'])
         return Response({'status': tribute.status})
 
+    def _get_memorial_with_permission_check(self, request, memorial_id):
+        """Check permissions for accessing a memorial"""
+        # For partner
+        partner_user = get_partner_user(request)
+        if partner_user:
+            memorial = get_object_or_404(
+                Memorial, 
+                pk=memorial_id,
+                partner=partner_user.partner 
+            )
+            return memorial
+        
+        if hasattr(request, 'family_invite'):
+            invite = request.family_invite
+            if invite.memorial.id != int(memorial_id):
+                return Response(
+                    {'detail': 'Token not for this memorial'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            return invite.memorial
+        
+        return Response(
+            {'detail': 'No access rights'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )    
+
 class TributeReject(APIView):
     permission_classes = [IsPartnerOrFamily]
     
@@ -83,7 +137,7 @@ class TributeReject(APIView):
             tribute.moderated_by_user = pu
         tribute.save(update_fields=['status'])
         return Response({'status': tribute.status})
-    
+
     def _get_memorial_with_permission_check(self, request, memorial_id):
         """Check permissions for accessing a memorial"""
         # For partner

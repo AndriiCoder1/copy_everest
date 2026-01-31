@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from model_utils import FieldTracker
 
 class Tribute(models.Model):
     memorial = models.ForeignKey(
@@ -30,7 +31,9 @@ class Tribute(models.Model):
         editable=False,                     
         verbose_name=_('partner moderator') 
     )
-    updated_at = models.DateTimeField(auto_now=True)  
+    updated_at = models.DateTimeField(auto_now=True)
+
+    tracker = FieldTracker()  
 
     class Meta:
         verbose_name = _('Tribute')     
@@ -42,6 +45,8 @@ class Tribute(models.Model):
         return f"Tribute from {self.author_name or 'Anonymous'} ({self.status})"
     
     def save(self, *args, **kwargs):
+
+        self._changed_fields = self.tracker.changed()
         # Автоматически обновляем approved_at при одобрении
         if self.status == 'approved' and not self.approved_at:
             from django.utils import timezone
