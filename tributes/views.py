@@ -4,9 +4,7 @@ from memorials.models import FamilyInvite, Memorial
 from .models import Tribute
 from assets.models import MediaAsset
 from audits.models import AuditLog
-import hashlib
-import json
-from django.core.cache import cache
+
 
 def family_full_view(request, short_code):
     token = request.GET.get('token')
