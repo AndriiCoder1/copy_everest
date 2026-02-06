@@ -21,12 +21,14 @@ INSTALLED_APPS = [
     'rest_framework',
     'storages',
     'django_prometheus',
+    'django_celery_results',
     'partners.apps.PartnersConfig',
     'memorials.apps.MemorialsConfig',
     'assets.apps.AssetsConfig',
     'tributes',
     'shortlinks.apps.ShortlinksConfig',
     'audits.apps.AuditsConfig',
+    
 ]
 
 #Стандартный порядок middleware для Django i18n
@@ -157,11 +159,60 @@ SECURE_REFERRER_POLICY = 'no-referrer'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'root': {'handlers': ['console'], 'level': 'INFO'},
+    
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'ai_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': LOG_DIR / 'ai_moderation.log',
+            'formatter': 'verbose',
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': LOG_DIR / 'audits.log',
+            'formatter': 'verbose',
+        },
+    },
+    
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'tributes.tasks': {
+            'handlers': ['ai_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'audits': {
+            'handlers': ['audit_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
 
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://172.20.10.4:8000']
@@ -180,6 +231,36 @@ DEFAULT_FROM_EMAIL = 'noreply@everest-dev.local'
 
 LOGIN_URL = '/admin/login/'
 
+# НАСТРОЙКИ ДЛЯ ИИ-МОДЕРАЦИИ 
+# Настройки Ollama (для локальной модели)
+OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/generate')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'phi3:latest')
+
+# Настройки Celery для фоновых задач
+# Пока используем локальный брокер (Redis не требуется для разработки)
+CELERY_BROKER_URL = 'memory://'  # Лёгкое решение для разработки без Redis
+CELERY_RESULT_BACKEND = 'django-db'  # Используем базу данных Django для хранения результатов
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TASK_ALWAYS_EAGER = True  # Задачи выполняются синхронно (для разработки)
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Настройки ИИ-модерации по умолчанию
+AI_MODERATION_SETTINGS = {
+    'auto_moderate_new': True,  # Автоматически модерировать новые трибьюты
+    'confidence_threshold_auto': 0.85,  # Порог для автоматического одобрения/отклонения
+    'confidence_threshold_flag': 0.60,  # Порог для пометки на ручную проверку
+    'max_retries': 3,  # Максимальное количество повторных попыток
+    'timeout_seconds': 60,  # Таймаут запроса к Ollama
+    'languages': ['de', 'fr', 'it', 'en'],  # Поддерживаемые языки
+    'prompt_templates': {
+        'de': 'Analysiere diesen Nachruf auf Angemessenheit...',
+        'fr': 'Analysez cet hommage pour sa pertinence...',
+        'it': 'Analizza questo tributo per la sua appropriatezza...',
+        'en': 'Analyze this tribute for appropriateness...',
+    }
+}
+
 # Настройки кэширования и сжатия статики
 if not DEBUG:
     # Кэширование статики
@@ -191,3 +272,17 @@ if not DEBUG:
         'django.contrib.staticfiles.finders.AppDirectoriesFinder',
         'compressor.finders.CompressorFinder',  
     ]
+    
+    # В продакшене включаем Redis и нормальный Celery
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+        }
+    }
+    
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    CELERY_TASK_ALWAYS_EAGER = False  # Отключаем синхронное выполнение
+
+
