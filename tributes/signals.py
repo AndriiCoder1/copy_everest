@@ -4,6 +4,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from .models import Tribute
+from .tasks import moderate_tribute_with_ai
 
 # Сигнал для отправки уведомления о новом трибиту
 @receiver(post_save, sender=Tribute)
@@ -57,3 +58,25 @@ http://172.20.10.4:8000/memorials/{memorial.short_code}/moderate/?token={invite.
             #except Exception as e:
                 #print(f"ERROR sending email: {e}")
                 #pass
+
+@receiver(post_save, sender=Tribute)
+def auto_trigger_ai_moderation(sender, instance, created, **kwargs):
+    """
+    Автоматически запускает ИИ-модерацию при создании трибьюта
+    """
+    # Логируем для отладки
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Signal triggered for Tribute {instance.id}, created={created}, status={instance.status}")
+    
+    if created and instance.status == 'pending':
+        logger.info(f"Launching AI moderation for Tribute {instance.id}")
+        transaction.on_commit(
+            lambda: moderate_tribute_with_ai.apply_async(
+                args=[instance.id], 
+                countdown=2  # 2 секунды задержки
+            )
+        )
+    else:
+        logger.info(f"Signal skipped: not new (created={created}) or not pending (status={instance.status})")                
