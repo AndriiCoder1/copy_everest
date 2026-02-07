@@ -7,5 +7,4 @@ class TributesConfig(AppConfig):
     verbose_name = _('Tributes')
 
     def ready(self):
-        
         import tributes.signals 
