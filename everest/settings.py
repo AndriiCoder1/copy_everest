@@ -237,12 +237,11 @@ OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/ge
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'phi3:latest')
 
 # Настройки Celery для фоновых задач
-# Пока используем локальный брокер (Redis не требуется для разработки)
-CELERY_BROKER_URL = 'memory://'  # Лёгкое решение для разработки без Redis
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  
 CELERY_RESULT_BACKEND = 'django-db'  # Используем базу данных Django для хранения результатов
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_TASK_ALWAYS_EAGER = True  # Задачи выполняются синхронно (для разработки)
+CELERY_TASK_ALWAYS_EAGER = False  
 CELERY_TASK_EAGER_PROPAGATES = True
 
 # Настройки ИИ-модерации по умолчанию
@@ -253,6 +252,28 @@ AI_MODERATION_SETTINGS = {
     'max_retries': 3,  # Максимальное количество повторных попыток
     'timeout_seconds': 60,  # Таймаут запроса к Ollama
     'languages': ['de', 'fr', 'it', 'en'],  # Поддерживаемые языки
+    
+    # Настройки проверки имен
+    'name_verification_strictness': 'strict',  # 'strict', 'moderate', 'lenient'
+    'name_check': {
+        'require_last_name_match': True,  # Требовать совпадение фамилии при упоминании имени
+        'auto_reject_on_wrong_last_name': False,  # True: отклонять, False: флажить при неправильной фамилии
+        'auto_flag_on_partial_name': True,  # Флаг если только имя без фамилии
+        'allow_no_name_mention': True,  # Разрешать трибьюты без упоминания имени
+        'min_name_length': 2,  # Минимальная длина имени для проверки
+        'check_for_test_names': True,  # Проверять тестовые имена (Test, Example и т.д.)
+    },
+    
+    # Настройки валидации текста
+    'text_validation': {
+        'min_text_length': 10,  # Минимальная длина текста
+        'max_text_length': 5000,  # Максимальная длина текста
+        'check_for_test_phrases': True,  # Проверять тестовые фразы
+        'check_for_spam_patterns': True,  # Проверять спам-паттерны
+        'allowed_languages': ['de', 'fr', 'it', 'en'],  # Разрешённые языки
+    },
+    
+    # Настройки промптов
     'prompt_templates': {
         'de': 'Analysiere diesen Nachruf auf Angemessenheit...',
         'fr': 'Analysez cet hommage pour sa pertinence...',

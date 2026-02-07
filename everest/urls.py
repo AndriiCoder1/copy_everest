@@ -6,8 +6,8 @@ from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import JavaScriptCatalog
 from django.shortcuts import render
 from . import views
+from everest.views import HealthCheckView
 
-# ============ URL PATTERNS ============
 
 urlpatterns = [
     # Standard i18n views (for language switching form)
@@ -29,6 +29,8 @@ urlpatterns = [
     path('', include('shortlinks.urls')),
     path('', include('audits.urls')),
     path('', include('django_prometheus.urls')),
+    path('api/health/', HealthCheckView.as_view(), name='health-check'),
+    path('health/', HealthCheckView.as_view(), name='health-check-simple'),
 ]
 
 # Admin with i18n patterns (adds /en/admin/, /fr/admin/, etc.)

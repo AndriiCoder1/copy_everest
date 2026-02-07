@@ -1,10 +1,14 @@
+import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
-from django.conf import settings
+from django.conf import settings 
 from django.utils import timezone
 from .models import Tribute
 from .tasks import moderate_tribute_with_ai
+from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 # Сигнал для отправки уведомления о новом трибиту
 @receiver(post_save, sender=Tribute)
@@ -59,24 +63,44 @@ http://172.20.10.4:8000/memorials/{memorial.short_code}/moderate/?token={invite.
                 #print(f"ERROR sending email: {e}")
                 #pass
 
+def safe_send_to_celery(tribute_id):
+    """Безопасная отправка задачи в Celery"""
+    try:
+        moderate_tribute_with_ai.delay(tribute_id)
+        logger.info(f"Задача отправлена в Celery для трибьюта {tribute_id}")
+    except Exception as e:
+        logger.error(f"Celery недоступен, запускаем синхронно: {e}")
+        # Запускаем задачу синхронно
+        #try:
+            #from tributes.utils import moderate_tribute_sync
+            #result = moderate_tribute_sync(tribute_id)
+            #logger.info(f"Синхронный результат: {result}")
+        #except Exception as sync_error:
+            #logger.error(f"Ошибка синхронного запуска: {sync_error}")                
+
 @receiver(post_save, sender=Tribute)
 def auto_trigger_ai_moderation(sender, instance, created, **kwargs):
     """
-    Автоматически запускает ИИ-модерацию при создании трибьюта
+    Автоматически запускает ИИ-модерацию для новых трибьютов со статусом 'pending'
     """
-    # Логируем для отладки
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    logger.info(f"Signal triggered for Tribute {instance.id}, created={created}, status={instance.status}")
-    
-    if created and instance.status == 'pending':
-        logger.info(f"Launching AI moderation for Tribute {instance.id}")
-        transaction.on_commit(
-            lambda: moderate_tribute_with_ai.apply_async(
-                args=[instance.id], 
-                countdown=2  # 2 секунды задержки
+    try:
+        # Только для новых записей или если статус изменился на pending
+        if not created and not instance.tracker.has_changed('status'):
+            return
+            
+        # Проверяем настройки авто-модерации
+        ai_settings = getattr(settings, 'AI_MODERATION_SETTINGS', {})
+        
+        if not ai_settings.get('auto_moderate_new', True):
+            return
+            
+        # Только для pending и если ещё не модерировалось ИИ
+        if instance.status == 'pending' and not instance.ai_moderated_at:
+            logger.info(f"Auto-triggering AI moderation for tribute {instance.id}")
+            
+            # Запускаем задачу в Celery после успешного коммита транзакции
+            transaction.on_commit(
+                lambda: safe_send_to_celery(instance.id)
             )
-        )
-    else:
-        logger.info(f"Signal skipped: not new (created={created}) or not pending (status={instance.status})")                
+    except Exception as e:
+        logger.error(f"Error in auto_trigger_ai_moderation: {e}")               
