@@ -3,6 +3,9 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from model_utils import FieldTracker
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Tribute(models.Model):
     memorial = models.ForeignKey(
@@ -99,13 +102,27 @@ class Tribute(models.Model):
         """
         Применяет вердикт ИИ к трибьюту и логирует действие.
         """
-        from audits.models import AuditLog
-        
+        from audits.models import AuditLog  
+    
         verdict = ai_result.get('verdict', 'flag_ai')
         confidence = ai_result.get('confidence', 0.5)
         reasoning = ai_result.get('reasoning', '')
         flags = ai_result.get('flags', [])
+        name_context = ai_result.get('name_context', 'unknown')
+    
+        # Получаем пороги из настроек
+        thresholds = settings.AI_MODERATION_SETTINGS.get('confidence_thresholds', {})
+        auto_approve = thresholds.get('auto_approve', 0.8)
+        auto_reject = thresholds.get('auto_reject', 0.7)
+
+        # Настройки проверки имён
+        name_strictness = settings.AI_MODERATION_SETTINGS.get('name_verification_strictness', 'lenient')
+        name_check = settings.AI_MODERATION_SETTINGS.get('name_check', {})
         
+        logger.info(f"Applying AI verdict for tribute {self.id}: verdict={verdict}, confidence={confidence}")
+        logger.info(f"Thresholds: approve={auto_approve}, reject={auto_reject}")
+        logger.info(f"Name context: {name_context}, Flags: {flags}")
+
         # Сохраняем результат ИИ
         self.ai_moderation_result = ai_result
         self.ai_moderated_at = timezone.now()
@@ -115,21 +132,53 @@ class Tribute(models.Model):
         action_taken = None
         auto_action = False
         
-        # Автоматические действия на основе высокой уверенности ИИ
-        # (можно настроить пороги в настройках)
-        if confidence >= 0.85:
+        # 1. Сначала проверяем КРИТИЧЕСКИЕ ошибки имён
+        critical_name_errors = ['wrong_both_names', 'wrong_first_name', 'wrong_last_name']
+        has_critical_name_error = any(error in str(flags) for error in critical_name_errors)
+    
+        if has_critical_name_error:
+            # Критическая ошибка имени - НЕ одобряем даже с высоким confidence!
+            self.status = 'pending'  # На ручную проверку
+            action_taken = 'ai_flag_name_mismatch'
+            auto_action = False
+            logger.warning(f"Critical name error for tribute {self.id}: {name_context}")
+    
+        # 2. Затем проверяем пороги для авто-действий
+        elif confidence >= auto_approve:
             if verdict == 'approved_ai' and self.status == 'pending':
-                self.status = 'approved'
-                self.approved_at = timezone.now()
-                action_taken = 'ai_auto_approve'
-                auto_action = True
-            elif verdict == 'rejected_ai' and self.status == 'pending':
+                # Проверяем предупреждения об именах
+                name_warnings = ['different_name_mentioned', 'partial_name_first_only', 'partial_name_last_only']
+                has_name_warning = any(warning in str(flags) for warning in name_warnings)
+            
+                if has_name_warning and name_strictness == 'strict':
+                    # При строгом режиме - флагим на проверку
+                    self.status = 'pending'
+                    action_taken = 'ai_flag_name_warning'
+                    auto_action = False
+                    logger.info(f"Name warning in strict mode: tribute {self.id} flagged")
+                else:
+                    # Одобряем
+                    self.status = 'approved'
+                    self.approved_at = timezone.now()
+                    action_taken = 'ai_auto_approve'
+                    auto_action = True
+                    logger.info(f"Auto-approved tribute {self.id}")
+                
+        elif confidence >= auto_reject:
+            if verdict == 'rejected_ai' and self.status == 'pending':
                 self.status = 'rejected'
                 action_taken = 'ai_auto_reject'
                 auto_action = True
+                logger.info(f"Auto-rejected tribute {self.id}")
         else:
             action_taken = 'ai_flag_review'
-        
+            logger.info(f"Tribute {self.id} needs manual review (confidence={confidence})")
+    
+        # Если не было авто-действия и статус не изменился
+        if not action_taken and self.status == 'pending':
+            action_taken = 'ai_flag_review'
+            
+    
         # Сохраняем изменения
         self.save(update_fields=[
             'ai_moderation_result',
@@ -139,11 +188,11 @@ class Tribute(models.Model):
             'status',
             'approved_at'
         ])
-        
+    
         # Логируем действие ИИ
         AuditLog.objects.create(
             actor_type='ai_moderator',
-            actor_id=None,  # У ИИ нет ID пользователя
+            actor_id=None,
             action=action_taken or 'ai_moderation_complete',
             target_type='tribute',
             target_id=self.id,
@@ -154,12 +203,17 @@ class Tribute(models.Model):
                 'ai_confidence': confidence,
                 'ai_reasoning': reasoning,
                 'ai_flags': flags,
+                'name_context': name_context,
                 'auto_action_taken': auto_action,
                 'gdpr_relevant': True,
                 'final_status': self.status,
+                'thresholds_used': { 
+                'auto_approve': auto_approve,
+                'auto_reject': auto_reject
+                }
             }
         )
-        
+    
         return {
             'action': action_taken,
             'auto_action': auto_action,

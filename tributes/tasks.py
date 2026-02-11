@@ -57,10 +57,25 @@ def analyze_name_mentions(text, memorial):
         name_lower = name.lower()
         
         # Игнорируем общие слова
-        common_words = {'herr', 'frau', 'mr', 'mrs', 'ms', 'family', 'familie', 'and', 'und', 'der', 'die', 'das'}
+        ignore_words = { # Обращения
+            'herr', 'frau', 'mr', 'mrs', 'ms', 'fraulein', 'dr', 'prof',
+            # Семья/отношения
+            'family', 'familie', 'and', 'und', 'oder', 'or',
+            # Артикли/местоимения
+            'der', 'die', 'das', 'den', 'dem', 'des',
+            'sein', 'seine', 'seinem', 'seinen', 'seiner',
+            'ihr', 'ihre', 'ihrem', 'ihren', 'ihrer',
+            'unser', 'unsere', 'unserem', 'unseren', 'unserer',
+            'euer', 'eure', 'eurem', 'euren', 'eurer',
+            # Прилагательные/существительные (часто используемые в текстах)
+            'gute', 'güte', 'weise', 'weisheit', 'ruhe', 'frieden',
+            'mensch', 'person', 'freund', 'kollege', 'nachbar',
+            'liebe', 'trauer', 'beileid', 'kondolenz',
+        }
         
         if (len(name) > 2 and 
-            name_lower not in common_words):
+            name_lower not in ignore_words and
+            not any(word in ignore_words for word in name_lower.split())):
             
             found_names.add(name)
             
@@ -101,7 +116,21 @@ def analyze_name_mentions(text, memorial):
     elif results['last_name_mentioned'] and not results['first_name_mentioned']:
         results['context'] = 'partial_name_last_only'
     elif results['other_names_found']:
-        results['context'] = 'different_name'
+        # ПРОВЕРЯЕМ: если другие имена - это реальные имена или просто слова
+        real_names = []
+        for name in results['other_names_found']:
+            name_lower = name.lower()
+            # Если имя похоже на реальное (не общеупотребимое слово)
+            if (len(name) > 3 and 
+                not any(common in name_lower for common in ['güte', 'Güte', 'weise', 'frieden', 'ruhe', 'beileid'])):
+                real_names.append(name)
+        
+        if real_names:
+            results['context'] = 'different_name'
+            results['other_names_found'] = real_names  # Обновляем список
+        else:
+            results['context'] = 'no_name'
+            results['other_names_found'] = []  # Очищаем если это не имена
     else:
         results['context'] = 'no_name'
     
@@ -153,15 +182,18 @@ MEMORIAL KONTEXT:
 - Name der verstorbenen Person: {memorial_name}
 - Memorial-ID: {memorial_code}
 
-NAME-ANALYSE (für deine Berücksichtigung):
+NAME-ANALYSE (für Kontext):
 {name_analysis}
+
+WICHTIG: Der Text muss sich NICHT zwingend auf den Namen beziehen. 
+Respektvolle allgemeine Kondolenzen sind auch ohne Namensnennung erlaubt.
 
 TEXT ZU ANALYSIEREN (kann auf Deutsch, Französisch, Italienisch oder Englisch sein):
 "{text}"
 
 KATEGORISCHE ABLEHNUNGSGRÜNDE (SOFORT REJECT wenn zutreffend):
 1. EXPLIZITE BELEIDIGUNGEN in JEDER Sprache (auch Russisch/andere):
-   - "жопа", "сука", "идиот", "дурак" (Russisch)
+   - "жопа", "сука", "идиот", "дурак", "шлюха", "козел", "мудак", "гандон", "пидарас", "пидар", "хуй", "хуесос", "хуесоска", "хуятина", "пидараз", "козлина", "коза", "тварь" (Russisch)
    - "scheisse", "arschloch", "hurensohn" (Deutsch)
    - "bitch", "asshole", "motherfucker" (Englisch)
    - "connard", "salope", "putain" (Französisch)
@@ -189,6 +221,8 @@ ENTSCHEIDUNGSLOGIK (PRIORITÄTEN):
 3. WENN 'Schwein', 'Hund' etc. als Beleidigung erkennbar → REJECT
 4. WENN unklarer Kontext (z.B. "Schwein" als möglicher Name) → FLAG
 5. WENN respektvoll ohne Probleme → APPROVE
+6. WENN persönliche Daten → REJECT (confidence 0.9+)
+7. WENN Text respektvoll und angemessen → APPROVE
 
 BEISPIELE für SOFORT-REJECT:
 - "Er war жопа ein Mensch" → REJECT (жопа = russische Beleidigung)
@@ -205,8 +239,10 @@ GIB DEINE ANTWORT NUR IM FOLGENDEN JSON-FORMAT AUS:
   "confidence": 0.0 bis 1.0,
   "reasoning": "Deutsche Begründung",
   "flags": ["liste", "der", "probleme"],
-  "rejection_category": "explicit_insult" | "hate_speech" | "vulgarity" | "none"
+  "rejection_category": "explicit_insult" | "hate_speech" | "vulgarity" | "personal_data" | "none"
 }}
+
+BITTE SEI FAIR: Text ohne Namensnennung ist erlaubt, wenn respektvoll!<|end|>
 
 WICHTIG: Sei STRENG bei Beleidigungen! Gib NUR das JSON zurück, keinen zusätzlichen Text!<|end|>
 <|user|>
@@ -277,71 +313,79 @@ def adjust_verdict_based_on_names(ai_result, name_analysis):
     """
     Корректирует вердикт ИИ на основе анализа имён.
     """
-    from django.conf import settings
     
-    name_settings = settings.AI_MODERATION_SETTINGS.get('name_check', {})
-    strictness = settings.AI_MODERATION_SETTINGS.get('name_verification_strictness', 'moderate')
+    strictness = settings.AI_MODERATION_SETTINGS.get('name_verification_strictness', 'strict')
+    name_check = settings.AI_MODERATION_SETTINGS.get('name_check', {})
     
-    # Используем настройки из AI_MODERATION_SETTINGS
-    auto_reject_wrong_name = name_settings.get('auto_reject_on_wrong_last_name', False)
+    # Получаем оригинальный вердикт и confidence
+    original_verdict = ai_result.get('verdict', 'pending_review')
+    original_confidence = ai_result.get('confidence', 0.5)
     
-    # Критические ошибки 
     if name_analysis.get('wrong_both_names', False):
-        # Комплектно неправильное имя
-        if auto_reject_wrong_name:
-            ai_result['verdict'] = 'rejected_ai'
-        else:
-            ai_result['verdict'] = 'flag_ai'
+        # Оба имени неправильные → отклоняем
+        ai_result['verdict'] = 'rejected_ai'
         ai_result['confidence'] = 0.2
         ai_result['flags'] = ai_result.get('flags', []) + ['wrong_both_names', 'name_mismatch']
+        ai_result['reasoning'] = f"NAMENSFEHLER: Falsche Person erwähnt. {ai_result.get('reasoning', '')}"
     
     elif name_analysis['wrong_first_name_detected']:
-        # Неправильное имя
-        if auto_reject_wrong_name and strictness == 'strict':
-            ai_result['verdict'] = 'rejected_ai'
-        else:
-            ai_result['verdict'] = 'flag_ai'
+        # Неправильное имя → отклоняем
+        ai_result['verdict'] = 'rejected_ai'
         ai_result['confidence'] = 0.3
         ai_result['flags'] = ai_result.get('flags', []) + ['wrong_first_name', 'name_mismatch']
+        ai_result['reasoning'] = f"NAMENSFEHLER: Falscher Vorname. {ai_result.get('reasoning', '')}"
     
     elif name_analysis['wrong_last_name_detected']:
-        # Неправильная фамилия
-        if auto_reject_wrong_name and strictness == 'strict':
-            ai_result['verdict'] = 'rejected_ai'
-        else:
-            ai_result['verdict'] = 'flag_ai'
+        # Неправильная фамилия → отклоняем
+        ai_result['verdict'] = 'rejected_ai'
         ai_result['confidence'] = 0.3
         ai_result['flags'] = ai_result.get('flags', []) + ['wrong_last_name', 'name_mismatch']
-        ai_result['reasoning'] = f"NAMENSFEHLER: {ai_result.get('reasoning', '')}"
+        ai_result['reasoning'] = f"NAMENSFEHLER: Falscher Nachname. {ai_result.get('reasoning', '')}"
     
-    # Предупреждения
+    elif name_analysis['full_name_mentioned']:
+        # Полное имя правильно → повышаем confidence
+        ai_result['confidence'] = min(original_confidence * 1.1, 0.95)
+        ai_result['flags'] = ai_result.get('flags', []) + ['correct_full_name']
+    
+    elif name_analysis['context'] == 'both_names_separate':
+        # Оба имени упомянуты отдельно → немного повышаем confidence
+        ai_result['confidence'] = min(original_confidence * 1.05, 0.95)
+        ai_result['flags'] = ai_result.get('flags', []) + ['both_names_separate']
+    
     elif name_analysis['context'] == 'partial_name_first_only':
-        # Только имя без фамилии
-        if strictness == 'strict':
-            ai_result['verdict'] = 'flag_ai'
-            ai_result['confidence'] = ai_result.get('confidence', 0.5) * 0.6
-        elif strictness == 'moderate':
-            ai_result['confidence'] = ai_result.get('confidence', 0.5) * 0.7
-        ai_result['flags'] = ai_result.get('flags', []) + ['missing_last_name']
+        # Только имя правильно → ОДОБРЯЕМ
+        if original_verdict == 'approved_ai':
+            ai_result['confidence'] = min(original_confidence * 1.05, 0.95)
+        ai_result['flags'] = ai_result.get('flags', []) + ['correct_first_name_only']
     
     elif name_analysis['context'] == 'partial_name_last_only':
-        # Только фамилия без имени
-        if strictness == 'strict':
-            ai_result['verdict'] = 'flag_ai'
-            ai_result['confidence'] = ai_result.get('confidence', 0.5) * 0.6
-        elif strictness == 'moderate':
-            ai_result['confidence'] = ai_result.get('confidence', 0.5) * 0.7
-        ai_result['flags'] = ai_result.get('flags', []) + ['missing_first_name']
+        # Только фамилия правильно → ОДОБРЯЕМ
+        if original_verdict == 'approved_ai':
+            ai_result['confidence'] = min(original_confidence * 1.05, 0.95)
+        ai_result['flags'] = ai_result.get('flags', []) + ['correct_last_name_only']
+    
+    # === ДРУГИЕ ИМЕНА → ОТКЛОНЯЕМ ===
     
     elif name_analysis['context'] == 'different_name':
-        # Другие имена
-        if strictness == 'strict':
-            ai_result['verdict'] = 'flag_ai'
-            ai_result['confidence'] = 0.4
-        elif strictness == 'moderate':
-            ai_result['confidence'] = ai_result.get('confidence', 0.5) * 0.6
+        # Упоминаются другие имена → отклоняем
+        ai_result['verdict'] = 'rejected_ai'
+        ai_result['confidence'] = 0.4
         ai_result['flags'] = ai_result.get('flags', []) + ['different_name_mentioned']
+        ai_result['reasoning'] = f"NAMENSFEHLER: Text bezieht sich auf andere Person. {ai_result.get('reasoning', '')}"
     
+    # === БЕЗ ИМЕНИ → ОСТАВЛЯЕМ КАК ЕСТЬ (AI решает) ===
+    
+    elif name_analysis['context'] == 'no_name':
+        # Имя не упомянуто → НЕ МЕНЯЕМ вердикт, только добавляем флаг
+        ai_result['flags'] = ai_result.get('flags', []) + ['no_name_mentioned']
+        # Можно СЛЕГКА снизить confidence для осторожности
+        if original_verdict == 'approved_ai':
+            ai_result['confidence'] = original_confidence * 0.9
+    
+    # Добавляем контекст для логов
+    ai_result['name_context'] = name_analysis['context']
+    
+    logger.info(f"Name adjustment: {name_analysis['context']}, final verdict: {ai_result['verdict']}, confidence: {ai_result['confidence']}")
     return ai_result
 
 
@@ -351,8 +395,8 @@ def check_explicit_insults(text):
     
     # Явные оскорбления на разных языках
     explicit_insults = {
-        'russian': ['жопа', 'сука', 'пизда', 'блядь', 'ебать', 'хуй', 'идиот', 'дурак'],
-        'german': ['scheisse', 'arsch', 'hurensohn', 'wichser', 'fotze', 'miststück'],
+        'russian': ['жопа', 'сука', 'пизда', 'блядь', 'ебать', 'хуй', 'идиот', 'дурак', 'шлюха', 'шлюх', 'дура', 'идиотка', 'хуйня', 'блядина'],
+        'german': ['scheisse', 'arsch', 'hurensohn', 'wichser', 'fotze', 'miststück', 'schwanz', 'hass', 'huren', 'hasse', 'schwein', 'hund', 'sau', 'kuh', 'affe', 'ratte', 'käfer', 'dick'],
         'english': ['shit', 'fuck', 'asshole', 'bitch', 'motherfucker', 'cunt'],
         'french': ['merde', 'putain', 'connard', 'salope', 'enculé'],
         'italian': ['merda', 'cazzo', 'stronzo', 'vaffanculo', 'puttana']
@@ -371,7 +415,13 @@ def check_explicit_insults(text):
         # Проверяем контекст: "Du Schwein!" vs "Herr Schwein"
         if re.search(r'\b(du|sie|er|sie)\s+schwein\b', text_lower, re.IGNORECASE):
             found_insults.append("schwein (animal_insult)")
-    
+
+    # Дополнительная проверка немецких оскорблений
+    additional_german = ['hass', 'hasse', 'hassen', 'idiot', 'depp', 'blöd', 'dumm']
+    for word in additional_german:
+        if word in text_lower:
+            found_insults.append(f"{word} (german_insult)")
+
     return found_insults    
 
 # Основная задача Celery для модерации трибьюта с помощью ИИ
@@ -420,7 +470,7 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
         
         # ===== 3. ОТПРАВКА В ИИ =====
         ollama_url = getattr(settings, 'OLLAMA_API_URL', 'http://localhost:11434/api/generate')
-        model_name = getattr(settings, 'OLLAMA_MODEL', 'phi3:latest')
+        model_name = getattr(settings, 'OLLAMA_MODEL', 'llama3.2:latest')
         
         payload = {
             "model": model_name,
@@ -446,12 +496,26 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
             
             # ===== 5. КОРРЕКЦИЯ НА ОСНОВЕ ИМЁН =====
             ai_result = adjust_verdict_based_on_names(ai_result, name_analysis)
+
+            # ===== ДОБАВЛЕННЫЙ ОТЛАДОЧНЫЙ ЛОГ =====
+            logger.info(f"=== DEBUG AI MODERATION ===")
+            logger.info(f"Tribute ID: {tribute_id}")
+            logger.info(f"Text preview: {tribute.text[:100]}...")
+            logger.info(f"AI raw response: {ai_response[:200]}...")
+            logger.info(f"Parsed AI result: {ai_result}")
+            logger.info(f"AI verdict: {ai_result.get('verdict')}")
+            logger.info(f"AI confidence: {ai_result.get('confidence')}")
+            logger.info(f"Name context: {name_analysis['context']}")
+            logger.info(f"Explicit insults found earlier: {explicit_insults}")
+            logger.info(f"=== END DEBUG ===")
             
             # ===== 6. ДОБАВЛЕНИЕ КОНТЕКСТА ДЛЯ ЛОГОВ =====
             ai_result['name_context'] = name_analysis['context']
             if name_analysis['other_names_found']:
                 ai_result['other_names'] = name_analysis['other_names_found'][:3]
-            
+
+            # ===== ДОБАВЛЕННЫЙ ЛОГ ПЕРЕД ВЫЗОВОМ =====
+            logger.info(f"Calling apply_ai_verdict with: {ai_result}")
             # ===== 7. ПРИМЕНЕНИЕ РЕЗУЛЬТАТА =====
             action = tribute.apply_ai_verdict(ai_result)
             

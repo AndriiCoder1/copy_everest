@@ -181,18 +181,21 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
+            'stream': 'ext://sys.stdout',
         },
         'ai_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': LOG_DIR / 'ai_moderation.log',
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
         'audit_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': LOG_DIR / 'audits.log',
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
     },
     
@@ -202,6 +205,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'tributes': {  
+            'handlers': ['ai_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },    
         'tributes.tasks': {
             'handlers': ['ai_file', 'console'],
             'level': 'INFO',
@@ -234,7 +242,7 @@ LOGIN_URL = '/admin/login/'
 # НАСТРОЙКИ ДЛЯ ИИ-МОДЕРАЦИИ 
 # Настройки Ollama (для локальной модели)
 OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/generate')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'phi3:latest')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2:latest')
 
 # Настройки Celery для фоновых задач
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  
@@ -244,43 +252,33 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TASK_ALWAYS_EAGER = False  
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# Настройки ИИ-модерации по умолчанию
 AI_MODERATION_SETTINGS = {
-    'auto_moderate_new': True,  # Автоматически модерировать новые трибьюты
-    'confidence_threshold_auto': 0.85,  # Порог для автоматического одобрения/отклонения
-    'confidence_threshold_flag': 0.60,  # Порог для пометки на ручную проверку
-    'max_retries': 3,  # Максимальное количество повторных попыток
-    'timeout_seconds': 60,  # Таймаут запроса к Ollama
-    'languages': ['de', 'fr', 'it', 'en'],  # Поддерживаемые языки
+    'auto_moderate_new': True,
+    'max_retries': 3,
+    'timeout_seconds': 60,
+    'languages': ['de', 'fr', 'it', 'en'],
     
-    # Настройки проверки имен
-    'name_verification_strictness': 'strict',  # 'strict', 'moderate', 'lenient'
+    # Пороги уверенности для авто-действий
+    'confidence_thresholds': {
+        'auto_approve': 0.80,    
+        'auto_reject': 0.70,     
+        'flag': 0.40,            
+    },
+    
+    # Настройки проверки имён - МЯГКИЕ
+    'name_verification_strictness': 'strict',
     'name_check': {
-        'require_last_name_match': True,  # Требовать совпадение фамилии при упоминании имени
-        'auto_reject_on_wrong_last_name': False,  # True: отклонять, False: флажить при неправильной фамилии
-        'auto_flag_on_partial_name': True,  # Флаг если только имя без фамилии
-        'allow_no_name_mention': True,  # Разрешать трибьюты без упоминания имени
-        'min_name_length': 2,  # Минимальная длина имени для проверки
-        'check_for_test_names': True,  # Проверять тестовые имена (Test, Example и т.д.)
+        'require_last_name_match': True,      
+        'auto_reject_on_wrong_last_name': True,
+        'auto_flag_on_partial_name': False,
+        'allow_no_name_mention': True,
+        'min_name_length': 2,
+        'check_for_test_names': True,
     },
     
-    # Настройки валидации текста
-    'text_validation': {
-        'min_text_length': 10,  # Минимальная длина текста
-        'max_text_length': 5000,  # Максимальная длина текста
-        'check_for_test_phrases': True,  # Проверять тестовые фразы
-        'check_for_spam_patterns': True,  # Проверять спам-паттерны
-        'allowed_languages': ['de', 'fr', 'it', 'en'],  # Разрешённые языки
-    },
     
-    # Настройки промптов
-    'prompt_templates': {
-        'de': 'Analysiere diesen Nachruf auf Angemessenheit...',
-        'fr': 'Analysez cet hommage pour sa pertinence...',
-        'it': 'Analizza questo tributo per la sua appropriatezza...',
-        'en': 'Analyze this tribute for appropriateness...',
-    }
 }
+
 
 # Настройки кэширования и сжатия статики
 if not DEBUG:
