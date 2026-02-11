@@ -165,11 +165,16 @@ def prepare_name_analysis_for_prompt(name_analysis, memorial):
     elif name_analysis['context'] == 'partial_name_last_only':
         lines.append(f"⚠️ Nur Nachname '{memorial.last_name}' erwähnt (Vorname fehlt).")
     
+    # ВАЖНОЕ ИЗМЕНЕНИЕ: Уточняем, что "andere Namen" могут быть абстрактными понятиями
     if name_analysis['other_names_found'] and not (name_analysis['wrong_first_name_detected'] or name_analysis['wrong_last_name_detected']):
-        lines.append(f"⚠️ Andere Namen gefunden: {', '.join(name_analysis['other_names_found'][:2])}")
+        lines.append(f"⚠️ Mögliche andere Namen gefunden: {', '.join(name_analysis['other_names_found'][:2])}")
+        lines.append(f"   HINWEIS: Können auch abstrakte Begriffe sein (z.B. 'Seine Güte', 'Ihre Weisheit')!")
     
     if name_analysis['context'] == 'no_name':
-        lines.append("ℹ️ Kein spezifischer Name erwähnt.")
+        lines.append("ℹ️ Kein spezifischer Name erwähnt (erlaubt für allgemeine Kondolenzen).")
+    
+    if name_analysis['context'] == 'different_name':
+        lines.append("⚠️ Mögliche andere Namen erwähnt. BITTE PRÜFEN: Sind es echte Personennamen oder abstrakte Begriffe?")
     
     return "\n".join(lines) if lines else "Keine Namensanalyse verfügbar."
 
@@ -182,71 +187,61 @@ MEMORIAL KONTEXT:
 - Name der verstorbenen Person: {memorial_name}
 - Memorial-ID: {memorial_code}
 
-NAME-ANALYSE (für Kontext):
+NAME-ANALYSE (NUR für Kontext):
 {name_analysis}
 
-WICHTIG: Der Text muss sich NICHT zwingend auf den Namen beziehen. 
-Respektvolle allgemeine Kondolenzen sind auch ohne Namensnennung erlaubt.
+WICHTIG ZU WISSEN:
+1. "Seine Güte", "Ihre Weisheit", "Unser Frieden" sind KEINE Personennamen, sondern abstrakte Begriffe!
+2. Allgemeine Kondolenzen ohne Namensnennung sind ERLAUBT und respektvoll.
+3. Wörter wie "Güte", "Frieden", "Ruhe" sind positive Attribute, keine Personennamen.
 
-TEXT ZU ANALYSIEREN (kann auf Deutsch, Französisch, Italienisch oder Englisch sein):
+TEXT ZU ANALYSIEREN (Deutsch, Französisch, Italienisch oder Englisch):
 "{text}"
 
-KATEGORISCHE ABLEHNUNGSGRÜNDE (SOFORT REJECT wenn zutreffend):
-1. EXPLIZITE BELEIDIGUNGEN in JEDER Sprache (auch Russisch/andere):
-   - "жопа", "сука", "идиот", "дурак", "шлюха", "козел", "мудак", "гандон", "пидарас", "пидар", "хуй", "хуесос", "хуесоска", "хуятина", "пидараз", "козлина", "коза", "тварь" (Russisch)
-   - "scheisse", "arschloch", "hurensohn" (Deutsch)
-   - "bitch", "asshole", "motherfucker" (Englisch)
-   - "connard", "salope", "putain" (Französisch)
-   - "stronzo", "cazzo", "vaffanculo" (Italienisch)
+PRÜFKRITERIEN - SOFORT ABLEHNEN wenn:
+A. EXPLIZITE BELEIDIGUNGEN in JEDER Sprache:
+   • Russisch: "жопа", "сука", "идиот", "дурак", "шлюха", "козел", "мудак"
+   • Deutsch: "scheisse", "arschloch", "hurensohn", "wichser"
+   • Englisch: "shit", "fuck", "asshole", "bitch", "motherfucker"
+   • Französisch: "merde", "putain", "connard", "salope"
+   • Italienisch: "merda", "cazzo", "stronzo", "vaffanculo"
 
-2. TIERBEZEICHNUNGEN als Beleidigung:
-   - "Schwein", "Hund", "Kuh", "Affe" wenn auf Person bezogen
-   - Ausnahme: Wenn offensichtlich Name (z.B. "Herr Schwein")
+B. TIERBEZEICHNUNGEN als Beleidigung:
+   • "Schwein", "Hund", "Kuh", "Affe" (nur wenn direkt auf Person bezogen)
+   • Ausnahme: Offensichtlicher Name wie "Herr Schwein"
 
-3. EXPLIZITE HASSREDE:
-   - Rassistische, sexistische, homophobe Äußerungen
-   - Drohungen, Gewaltaufrufe
+C. EXPLIZITE HASSREDE:
+   • Rassistische, sexistische, homophobe Äußerungen
+   • Drohungen oder Gewaltaufrufe
 
-ERWEITERTE PRÜFKRITERIEN:
-1. Beleidigungen, Hassrede oder Vulgarität (in ALLEN Sprachen prüfen!)
-2. Persönliche/private Daten (Telefon, Adresse, Email)  
-3. Werbung/Spam (Links, Produktnennungen)
-4. Unangemessener Ton für Trauerfeier
-5. TEXT-INTEGRITÄT: Plötzliche Sprachwechsel, Testphrasen
-6. NAMENS-KONTEXT: Bezieht sich Text auf richtiges Memorial?
+D. PERSÖNLICHE DATEN:
+   • Telefonnummern, Adressen, Email-Adressen
 
-ENTSCHEIDUNGSLOGIK (PRIORITÄTEN):
-1. WENN kategorische Ablehnungsgründe (oben) → SOFORT REJECT (confidence 0.9+)
-2. WENN offensichtliche Beleidigungen in Fremdsprachen → REJECT
-3. WENN 'Schwein', 'Hund' etc. als Beleidigung erkennbar → REJECT
-4. WENN unklarer Kontext (z.B. "Schwein" als möglicher Name) → FLAG
-5. WENN respektvoll ohne Probleme → APPROVE
-6. WENN persönliche Daten → REJECT (confidence 0.9+)
-7. WENN Text respektvoll und angemessen → APPROVE
+E. WERBUNG/SPAM:
+   • Links, Produktnennungen, kommerzielle Inhalte
 
-BEISPIELE für SOFORT-REJECT:
-- "Er war жопа ein Mensch" → REJECT (жопа = russische Beleidigung)
-- "Du Schwein!" → REJECT (Tier als Beleidigung)
-- "Scheisse, er war..." → REJECT (explizite Vulgarität)
+ENTSCHEIDUNGSLOGIK (in dieser Reihenfolge prüfen):
+1. WENN Kriterien A-C zutreffen → REJECT (confidence 0.9+)
+2. WENN Kriterien D-E zutreffen → REJECT (confidence 0.8+)
+3. WENN Text respektvoll und angemessen → APPROVE (confidence 0.6-0.95)
+4. WENN unklar/mehrdeutig → FLAG für manuelle Prüfung
 
-BEISPIELE für FLAG:
-- "Herr Schwein war..." → FLAG (möglicher Name)
-- "Er war stark wie ein Bär" → APPROVE (positiver Vergleich)
+BEACHTE BEI NAMEN:
+- Abstrakte Begriffe (Güte, Weisheit, Frieden) sind KEINE Personennamen!
+- Fehlende Namensnennung ist bei allgemeinen Kondolenzen OK
 
-GIB DEINE ANTWORT NUR IM FOLGENDEN JSON-FORMAT AUS:
+GIB NUR DIESES JSON-FORMAT ZURÜCK:
 {{
   "verdict": "approved_ai" | "rejected_ai" | "flag_ai",
   "confidence": 0.0 bis 1.0,
   "reasoning": "Deutsche Begründung",
   "flags": ["liste", "der", "probleme"],
-  "rejection_category": "explicit_insult" | "hate_speech" | "vulgarity" | "personal_data" | "none"
+  "rejection_category": "explicit_insult" | "hate_speech" | "vulgarity" | "personal_data" | "spam" | "none"
 }}
 
-BITTE SEI FAIR: Text ohne Namensnennung ist erlaubt, wenn respektvoll!<|end|>
-
-WICHTIG: Sei STRENG bei Beleidigungen! Gib NUR das JSON zurück, keinen zusätzlichen Text!<|end|>
+Sei STRENG bei Beleidigungen, aber FAIR bei respektvollen Texten!<|end|>
 <|user|>
-Analysiere diesen Nachruf mit obigem Memorial-Kontext (Text kann Deutsch, Französisch, Italienisch oder Englisch sein):<|end|>
+Analysiere diesen Nachruf:<|end|>
 <|assistant|>"""
     
     return prompt_template.format(
