@@ -9,12 +9,86 @@ from .models import Tribute
 
 logger = logging.getLogger(__name__)
 
+VALID_VERDICTS = {'approved_ai', 'rejected_ai', 'flag_ai'}
+VALID_REJECTION_CATEGORIES = {'insult', 'hate_speech', 'vulgarity', 'wrong_person', 'spam', 'test', 'personal_data', 'none'}
+
+# === ФУНКЦИЯ ПРЕ-МОДЕРАЦИИ ===
+def check_pre_moderation_red_flags(text):
+    """
+    Быстрые проверки ДО отправки в AI - отсекаем явный мусор.
+    Возвращает кортеж (True/False, "причина"), где True значит, что нужно отклонить.
+    """
+    text_lower = text.lower().strip()
+    
+    # 1. Слишком короткий/бессмысленный
+    if len(text_lower) < 10:
+        # Но проверяем - может это просто "Мои соболезнования"
+        meaningful_short = any(phrase in text_lower for phrase in [
+            'mein beileid', 'condoléances', 'condoglianze', 'my condolences',
+            'соболезную', 'співчуття', 'riposa in pace', 'rip'
+        ])
+        if not meaningful_short:
+            return True, "text_too_short_or_meaningless"
+    
+    # 2. Клавиатурный спам
+    keyboard_spam_patterns = [
+        r'^[asdfghjkl;]+$',  # asdfghjkl
+        r'^[qwertyuiop]+$',  # qwertyuiop
+        r'^[zxcvbnm]+$',     # zxcvbnm
+        r'^[йцукенгшщзхъ]+$', # русская раскладка
+        r'^[1234567890]+$',  # цифры
+    ]
+    
+    for pattern in keyboard_spam_patterns:
+        if re.match(pattern, text_lower):
+            return True, "keyboard_spam"
+    
+    # 3. Тестовые фразы
+    test_phrases = [
+        'test', 'тест', 'проба', 'check', 'testing',
+        '123', '456', '789', '000', '111',
+        'hello world', 'привет мир'
+    ]
+    
+    if any(phrase in text_lower for phrase in test_phrases) and len(text_lower) < 30:
+        return True, "test_phrase"
+    
+    # 4. Чрезмерное количество эмодзи
+    emoji_count = sum(1 for char in text if char in [
+        '💀', '😂', '🤣', '👻', '😈', '😅', '😆', '😁',
+        '🎉', '🔥', '💩', '🤡', '👏', '🙈', '🙉', '🙊'
+    ])
+    
+    if emoji_count >= 3 and len(text) < 50:  # Много эмодзи в коротком тексте
+        return True, "excessive_emoji_spam"
+    
+    # 5. "Рофл" и интернет-сленг в неподходящем контексте
+    inappropriate_slang = [
+        'рофл', 'ролф', 'rofl', 'лмао', 'lmao', 'кек', 'kek',
+        'ауф', 'auf', 'краш', 'crash', 'кринж', 'cringe',
+        'прикол', 'шуточка', 'шутка', 'joke', 'prank',
+        'чебурек', 'пельмень', 'пацан', 'братан'
+    ]
+    
+    # Если сленг есть И текст короткий И нет уважительных слов
+    if any(slang in text_lower for slang in inappropriate_slang):
+        respectful_words = ['beileid', 'condoléances', 'condoglianze', 'condolences',
+                           'соболезн', 'співчут', 'trauer', 'mourning', 'peace']
+        if not any(word in text_lower for word in respectful_words):
+            return True, "inappropriate_slang_context"
+    
+    return False, "ok"
+
 # Анализ упоминаний имени мемориала в тексте
 def analyze_name_mentions(text, memorial):
     """
     Анализирует упоминания имени мемориала в тексте.
     Возвращает словарь с результатами анализа.
     """
+    logger.info(f"===== ANALYZE NAMES DEBUG =====")
+    logger.info(f"Text: {text[:100]}...")
+    logger.info(f"Memorial: {memorial.first_name} {memorial.last_name}")
+
     text_lower = text.lower()
     full_name = f"{memorial.first_name} {memorial.last_name}".lower()
     first_name = memorial.first_name.lower()
@@ -29,11 +103,34 @@ def analyze_name_mentions(text, memorial):
         'wrong_last_name_detected': False,
         'context': 'unknown'
     }
-
-    # Шаблон для поиска "Имя Фамилия" или "Фамилия"
+    
+    # СПИСОК АБСТРАКТНЫХ ПОНЯТИЙ - НИКОГДА НЕ СЧИТАТЬ ИМЕНАМИ!
+    abstract_nouns = {
+        'güte', 'weisheit', 'geduld', 'liebe', 'hoffnung',
+        'freude', 'trauer', 'frieden', 'ruhe', 'stärke',
+        'mut', 'kraft', 'würde', 'stolz', 'demut',
+        'freundlichkeit', 'hilfsbereitschaft', 'grosszügigkeit',
+        'mitgefühl', 'anteilnahme', 'beileid', 'kondolenz'
+    }
+    
+    # МЕСТОИМЕНИЯ - НЕ ИМЕНА
+    pronouns = {
+        'sein', 'seine', 'seinem', 'seinen', 'seiner',
+        'ihr', 'ihre', 'ihrem', 'ihren', 'ihrer',
+        'unser', 'unsere', 'unserem', 'unseren', 'unserer',
+        'mein', 'meine', 'meinem', 'meinen', 'meiner',
+        'dein', 'deine', 'deinem', 'deinen', 'deiner',
+        'euer', 'eure', 'eurem', 'euren', 'eurer'
+    }
+    
+    # Паттерны для поиска имен
     name_patterns = [
-        r'\b([A-ZÄÖÜ][a-zäöüß]+)\s+([A-ZÄÖÜ][a-zäöüß]+)\b',  
-        r'\b(Herr|Frau|Mr\.|Mrs\.|Ms\.)\s+([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)?)\b',
+        # Два слова с заглавной буквы (полное имя)
+        r'\b([A-ZÄÖÜ][a-zäöüß]+)\s+([A-ZÄÖÜ][a-zäöüß]+)\b',
+        # Обращения + имя/фамилия
+        r'\b(Herr|Frau|Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)?)\b',
+        # ОДИНОЧНЫЕ ИМЕНА - ЭТО ВАЖНО!
+        r'\b([A-ZÄÖÜ][a-zäöüß]+)\b',
     ]
     
     all_name_matches = []
@@ -41,38 +138,83 @@ def analyze_name_mentions(text, memorial):
         matches = re.findall(pattern, text)
         for match in matches:
             if isinstance(match, tuple):
-                # Для "Имя Фамилия"
-                name_parts = [m for m in match if m and len(m) > 1]
-                if len(name_parts) >= 2:
-                    found_name = ' '.join(name_parts[:2])
+                if len(match) >= 2:
+                    first_word = match[0]
+                    second_word = match[1]
+                    
+                    # КРИТИЧЕСКАЯ ПРОВЕРКА: НЕ ловим "Seine Güte"
+                    if first_word.lower() in pronouns and second_word.lower() in abstract_nouns:
+                        continue  # ПРОПУСКАЕМ - это не имя!
+                    
+                    # Также проверяем, не абстрактное ли это понятие
+                    if second_word.lower() in abstract_nouns:
+                        continue
+                    
+                    found_name = ' '.join(match[:2])
                     all_name_matches.append(found_name)
             else:
-                # Для одиночных совпадений
-                if match and len(match) > 2:
-                    all_name_matches.append(match)
-    
-    # Анализируем найденные имена
+                # Одиночные слова с большой буквы
+                if match and len(match) > 3 and match[0].isupper():
+                    # Проверяем, не абстрактное ли это понятие
+                    if match.lower() not in abstract_nouns:
+                        all_name_matches.append(match)
+    logger.info(f"All name matches found: {all_name_matches}")
+    # Игнорируем общие слова
+    ignore_words = abstract_nouns | pronouns | {
+        # Обращения
+        'herr', 'frau', 'mr', 'mrs', 'ms', 'fräulein', 'dr', 'prof',
+        'sir', 'madam', 'monsieur', 'madame', 'signor', 'signora',
+        
+        # Семья/отношения
+        'family', 'familie', 'and', 'und', 'oder', 'or',
+        'vater', 'mutter', 'sohn', 'tochter', 'bruder', 'schwester',
+        'father', 'mother', 'son', 'daughter', 'brother', 'sister',
+        
+        # Артикли/местоимения
+        'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'eines',
+        'sein', 'seine', 'seinem', 'seinen', 'seiner', 'Seine',
+        'ihr', 'ihre', 'ihrem', 'ihren', 'ihrer',
+        'unser', 'unsere', 'unserem', 'unseren', 'unserer',
+        'euer', 'eure', 'eurem', 'euren', 'eurer',
+        'mein', 'meine', 'meinem', 'meinen', 'meiner',
+        'dein', 'deine', 'deinem', 'deinen', 'deiner',
+        
+        # Прилагательные/существительные (часто используемые в текстах)
+        'gute', 'güte', 'weise', 'weisheit', 'ruhe', 'frieden',
+        'friede', 'ruh', 'gedenken', 'erinnerung', 'Möge',
+        'mensch', 'person', 'freund', 'kollege', 'nachbar', 'mitarbeiter',
+        'liebe', 'trauer', 'beileid', 'kondolenz', 'mitgefühl',
+        'dank', 'dankbarkeit', 'respekt', 'ehre', 'Güte'  
+        'herz', 'seele', 'geist', 'leben',
+        
+        # Местоимения
+        'jemand', 'niemand', 'jedermann', 'etwas', 'nichts',
+        'man', 'frau', 'kind', 'kinder',
+        
+        # Дни/время
+        'heute', 'gestern', 'morgen', 'tag', 'zeit', 'stunde',
+        
+        # Общие немецкие слова, которые могут быть с большой буквы
+        'deutschland', 'schweiz', 'österreich', 'europa', 'welt'
+    }
+
     found_names = set()
     for name in all_name_matches:
         name_lower = name.lower()
+        name_words = name_lower.split()
         
-        # Игнорируем общие слова
-        ignore_words = { # Обращения
-            'herr', 'frau', 'mr', 'mrs', 'ms', 'fraulein', 'dr', 'prof',
-            # Семья/отношения
-            'family', 'familie', 'and', 'und', 'oder', 'or',
-            # Артикли/местоимения
-            'der', 'die', 'das', 'den', 'dem', 'des',
-            'sein', 'seine', 'seinem', 'seinen', 'seiner',
-            'ihr', 'ihre', 'ihrem', 'ihren', 'ihrer',
-            'unser', 'unsere', 'unserem', 'unseren', 'unserer',
-            'euer', 'eure', 'eurem', 'euren', 'eurer',
-            # Прилагательные/существительные (часто используемые в текстах)
-            'gute', 'güte', 'weise', 'weisheit', 'ruhe', 'frieden',
-            'mensch', 'person', 'freund', 'kollege', 'nachbar',
-            'liebe', 'trauer', 'beileid', 'kondolenz',
-        }
+        # ПРОВЕРКА: Если все слова в ignore_words - игнорируем
+        if all(word in ignore_words for word in name_words):
+            continue
+            
+        # ПРОВЕРКА: Если это местоимение + абстрактное понятие
+        if len(name_words) >= 2:
+            if name_words[0] in pronouns and name_words[1] in abstract_nouns:
+                continue
         
+        # Только теперь считаем это возможным именем
+        found_names.add(name)
+
         if (len(name) > 2 and 
             name_lower not in ignore_words and
             not any(word in ignore_words for word in name_lower.split())):
@@ -90,15 +232,16 @@ def analyze_name_mentions(text, memorial):
                 if found_first == first_name and found_last != last_name:
                     results['wrong_last_name_detected'] = True
                     results['detected_wrong_name'] = name
-                    results['wrong_last_name_details'] = f"Expected: {last_name}, Found: {found_last}"
+                    
                 
                 # Если нашли фамилию мемориала, но с другим именем
                 if found_last == last_name and found_first != first_name:
                     results['wrong_first_name_detected'] = True
                     results['detected_wrong_name'] = name
-                    results['wrong_first_name_details'] = f"Expected: {first_name}, Found: {found_first}"
+                    
     
     results['other_names_found'] = list(found_names)
+    logger.info(f"Found names after filtering: {found_names}")
     
     # Определяем контекст для промпта
     if results['wrong_first_name_detected'] and results['wrong_last_name_detected']:
@@ -120,10 +263,18 @@ def analyze_name_mentions(text, memorial):
         real_names = []
         for name in results['other_names_found']:
             name_lower = name.lower()
-            # Если имя похоже на реальное (не общеупотребимое слово)
-            if (len(name) > 3 and 
-                not any(common in name_lower for common in ['güte', 'Güte', 'weise', 'frieden', 'ruhe', 'beileid'])):
-                real_names.append(name)
+            name_words = name_lower.split()
+
+             # Если это местоимение + абстрактное понятие - НЕ ИМЯ
+            if len(name_words) >= 2:
+                if name_words[0] in pronouns and name_words[1] in abstract_nouns:
+                    continue
+            
+            # Если это одно слово и оно в абстрактных понятиях - НЕ ИМЯ
+            if len(name_words) == 1 and name_lower in abstract_nouns:
+                continue
+
+            real_names.append(name)
         
         if real_names:
             results['context'] = 'different_name'
@@ -133,7 +284,10 @@ def analyze_name_mentions(text, memorial):
             results['other_names_found'] = []  # Очищаем если это не имена
     else:
         results['context'] = 'no_name'
-    
+    logger.info(f"Final context: {results['context']}")
+    logger.info(f"Other names found: {results['other_names_found']}")
+    logger.info(f"===== END ANALYZE NAMES DEBUG =====")
+
     return results
 
 def prepare_name_analysis_for_prompt(name_analysis, memorial):
@@ -427,6 +581,30 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
     """
     try:
         tribute = Tribute.objects.get(id=tribute_id)
+
+        # ===== 0. ПРОВЕРКА СТАТУСА =====
+        if tribute.status != 'pending' or tribute.ai_moderated_at:
+            return f"Tribute {tribute_id} already moderated or not pending"
+
+        # ===== 1. БЫСТРАЯ ПРЕ-МОДЕРАЦИЯ (ДО AI) =====
+        pre_mod_reject, reason = check_pre_moderation_red_flags(tribute.text)
+        if pre_mod_reject:
+            logger.warning(f"Pre-moderation reject for tribute {tribute_id}: {reason}")
+            
+            tribute.status = 'rejected'
+            tribute.ai_verdict = 'rejected_ai'
+            tribute.ai_confidence = 0.95
+            tribute.ai_moderation_result = {
+                "verdict": "rejected_ai",
+                "confidence": 0.95,
+                "reasoning": f"Unangemessener Inhalt erkannt: {reason}",
+                "flags": ["pre_moderation_reject", reason],
+                "auto_action": True,
+                "rejection_category": "inappropriate_content"
+            }
+            tribute.save()
+            return f"Pre-moderation rejected: {reason}"
+
         # Проверка на явные оскорбления
         explicit_insults = check_explicit_insults(tribute.text)
 
@@ -446,26 +624,39 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
                 "rejection_category": "explicit_insult"
             }
             tribute.save()
-            
             return f"Auto-rejected for explicit insults: {explicit_insults[:2]}"
-        # Если уже отмодерирован или не в pending - пропускаем
-        if tribute.status != 'pending' or tribute.ai_moderated_at:
-            return f"Tribute {tribute_id} already moderated or not pending"
-        
+
+        # ===== 1. АНАЛИЗ ИМЁН =====        
         memorial = tribute.memorial
-        
-        # ===== 1. АНАЛИЗ ИМЁН =====
         name_analysis = analyze_name_mentions(tribute.text, memorial)
-        name_analysis_text = prepare_name_analysis_for_prompt(name_analysis, memorial)
-        
         logger.info(f"Name analysis for tribute {tribute_id}: {name_analysis['context']}")
-        
+
+        # Если найдено чужое имя - сразу отклоняем, не отправляя в ИИ!
+        if name_analysis['context'] in ['wrong_both_names', 'wrong_first_name', 'wrong_last_name', 'different_name']:
+            logger.warning(f"Wrong name detected for tribute {tribute_id}: {name_analysis['context']} - {name_analysis.get('other_names_found', [])}")
+            
+            tribute.status = 'rejected'
+            tribute.ai_verdict = 'rejected_ai'
+            tribute.ai_confidence = 0.95
+            tribute.ai_moderation_result = {
+                "verdict": "rejected_ai",
+                "confidence": 0.95,
+                "reasoning": f"Falscher Name erkannt: {name_analysis['context']} - {name_analysis.get('other_names_found', [])}",
+                "flags": ["wrong_name_detected"] + name_analysis.get('other_names_found', [])[:3],
+                "auto_action": True,
+                "rejection_category": "wrong_person"
+            }
+            tribute.ai_moderated_at = timezone.now()
+            tribute.save()
+            return f"Rejected: wrong name detected ({name_analysis['context']})"
+
         # ===== 2. ПОСТРОЕНИЕ ПРОМПТА С КОНТЕКСТОМ =====
+        name_analysis_text = prepare_name_analysis_for_prompt(name_analysis, memorial)
         prompt = build_ai_prompt(tribute.text, memorial, name_analysis_text)
         
         # ===== 3. ОТПРАВКА В ИИ =====
         ollama_url = getattr(settings, 'OLLAMA_API_URL', 'http://localhost:11434/api/generate')
-        model_name = getattr(settings, 'OLLAMA_MODEL', 'llama3.2:latest')
+        model_name = getattr(settings, 'OLLAMA_MODEL', 'phi3:latest')
         
         payload = {
             "model": model_name,
@@ -474,7 +665,7 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
             "options": {
                 "temperature": 0.1,
                 "top_p": 0.9,
-                "num_predict": 600,  # Немного больше для расширенного промпта
+                "num_predict": 600,  
                 "stop": ["<|end|>", "\n\n"]
             }
         }
@@ -517,7 +708,6 @@ def moderate_tribute_with_ai(tribute_id, retry_count=0):
             # Логируем успех
             logger.info(f"ИИ отмодерировал трибьют {tribute_id}: {action}")
             logger.info(f"Name context: {name_analysis['context']}")
-            
             return f"AI moderation completed for {tribute_id}: {action} (name context: {name_analysis['context']})"
             
         except requests.exceptions.RequestException as e:

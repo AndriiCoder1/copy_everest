@@ -146,7 +146,7 @@ AWS_DEFAULT_ACL = None
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'], 
 }
 
 SECURE_SSL_REDIRECT = False
@@ -242,7 +242,7 @@ LOGIN_URL = '/admin/login/'
 # НАСТРОЙКИ ДЛЯ ИИ-МОДЕРАЦИИ 
 # Настройки Ollama (для локальной модели)
 OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/generate')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2:latest')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'phi3:latest')
 
 # Настройки Celery для фоновых задач
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  

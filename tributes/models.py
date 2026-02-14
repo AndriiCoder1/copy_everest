@@ -116,7 +116,7 @@ class Tribute(models.Model):
         auto_reject = thresholds.get('auto_reject', 0.7)
 
         # Настройки проверки имён
-        name_strictness = settings.AI_MODERATION_SETTINGS.get('name_verification_strictness', 'lenient')
+        name_strictness = settings.AI_MODERATION_SETTINGS.get('name_verification_strictness', 'strict')
         name_check = settings.AI_MODERATION_SETTINGS.get('name_check', {})
         
         logger.info(f"Applying AI verdict for tribute {self.id}: verdict={verdict}, confidence={confidence}")
@@ -142,34 +142,32 @@ class Tribute(models.Model):
             action_taken = 'ai_flag_name_mismatch'
             auto_action = False
             logger.warning(f"Critical name error for tribute {self.id}: {name_context}")
+
+        # 2. Затем проверяем REJECT (самый высокий приоритет после критических ошибок)
+        elif confidence >= auto_reject and verdict == 'rejected_ai':
+            self.status = 'rejected'
+            action_taken = 'ai_auto_reject'
+            auto_action = True
+            logger.info(f"Auto-rejected tribute {self.id}")    
     
-        # 2. Затем проверяем пороги для авто-действий
-        elif confidence >= auto_approve:
-            if verdict == 'approved_ai' and self.status == 'pending':
-                # Проверяем предупреждения об именах
-                name_warnings = ['different_name_mentioned', 'partial_name_first_only', 'partial_name_last_only']
-                has_name_warning = any(warning in str(flags) for warning in name_warnings)
-            
-                if has_name_warning and name_strictness == 'strict':
-                    # При строгом режиме - флагим на проверку
-                    self.status = 'pending'
-                    action_taken = 'ai_flag_name_warning'
-                    auto_action = False
-                    logger.info(f"Name warning in strict mode: tribute {self.id} flagged")
-                else:
-                    # Одобряем
-                    self.status = 'approved'
-                    self.approved_at = timezone.now()
-                    action_taken = 'ai_auto_approve'
-                    auto_action = True
-                    logger.info(f"Auto-approved tribute {self.id}")
-                
-        elif confidence >= auto_reject:
-            if verdict == 'rejected_ai' and self.status == 'pending':
-                self.status = 'rejected'
-                action_taken = 'ai_auto_reject'
+        # 3. Потом APPROVE
+        elif confidence >= auto_approve and verdict == 'approved_ai':
+            # Проверяем предупреждения об именах
+            name_warnings = ['different_name_mentioned', 'partial_name_first_only', 'partial_name_last_only']
+            has_name_warning = any(warning in str(flags) for warning in name_warnings)
+
+            if has_name_warning and name_strictness == 'strict':
+                self.status = 'pending'
+                action_taken = 'ai_flag_name_warning'
+                auto_action = False
+                logger.info(f"Name warning in strict mode: tribute {self.id} flagged")
+            else:
+                self.status = 'approved'
+                self.approved_at = timezone.now()
+                action_taken = 'ai_auto_approve'
                 auto_action = True
-                logger.info(f"Auto-rejected tribute {self.id}")
+                logger.info(f"Auto-approved tribute {self.id}")
+            
         else:
             action_taken = 'ai_flag_review'
             logger.info(f"Tribute {self.id} needs manual review (confidence={confidence})")
@@ -247,8 +245,6 @@ class Tribute(models.Model):
                 moderate_tribute_with_ai.delay(self.id)
                 return True
             except ImportError:
-                # Если tasks.py еще не создан, пока пропускаем
-                # Позже можно добавить fallback-логику
                 cache.delete(lock_key)
                 return False
         
