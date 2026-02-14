@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ memorial.first_name }} {{ memorial.last_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #F5F5F5;
+            --bg-lighter: #FAFAFA;
+            --text-dark: #2F2F2F;
+            --text-gray: #6F6F6F;
+            --gold-primary: #C9A45C;
+            --gold-light: #E6D3A3;
+            --gold-dark: #9E7C3A;
+            --border-light: rgba(0, 0, 0, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at center, var(--bg-lighter) 0%, var(--bg-light) 100%);
+            color: var(--text-dark);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .memorial-header {
+            background: white;
+            padding: 3rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-light);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+        }
+        .memorial-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .life-dates { display:flex; justify-content:center; gap:3rem; margin:2rem 0; color:var(--text-gray); font-size:1.2rem; }
+        .gold-line { width:100px; height:3px; background: linear-gradient(135deg, var(--gold-light), var(--gold-primary), var(--gold-dark)); margin: 1.5rem auto; border-radius:2px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+        .card { background:white; border-radius:10px; padding:2rem; margin-bottom:2rem; box-shadow:0 4px 20px rgba(0,0,0,0.05); border:1px solid var(--border-light); }
+        .card-title { font-family:'Montserrat',sans-serif; font-size:1.5rem; color:var(--text-dark); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--gold-primary); font-weight:500; }
+        .biography-text { font-size:1.1rem; line-height:1.8; color:var(--text-dark); }
+        .media-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap:1.5rem; margin-top:1.5rem; }
+        .media-item { position:relative; border-radius:8px; overflow:hidden; box-shadow:0 3px 10px rgba(0,0,0,0.1); transition: transform .3s ease; }
+        .media-item:hover { transform: translateY(-5px); }
+        .media-img { width:100%; height:200px; object-fit:cover; }
+        .media-document { height:200px; background: linear-gradient(135deg, var(--bg-light), white); display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--text-gray); }
+        .document-icon { font-size:3rem; margin-bottom:1rem; color:var(--gold-primary); }
+        .section-title { font-family:'Montserrat',sans-serif; font-size:1.8rem; color:var(--text-dark); text-align:center; margin:3rem 0 2rem; position:relative; }
+        .section-title:after { content:''; display:block; width:80px; height:3px; background: linear-gradient(135deg, var(--gold-light), var(--gold-primary)); margin: .5rem auto; border-radius:2px; }
+        .btn { padding:.75rem 1.5rem; border:none; border-radius:5px; font-family:'Montserrat',sans-serif; font-weight:500; cursor:pointer; transition: all .3s ease; text-transform:uppercase; letter-spacing:.05em; font-size:.9rem; }
+        .btn-approve { background: linear-gradient(135deg, var(--gold-light), var(--gold-primary)); color:white; }
+        .btn-approve:hover { background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark)); }
+        .tribute-card { background: var(--bg-lighter); border-left:4px solid var(--gold-primary); padding:1.25rem; margin-bottom:1rem; border-radius:0 8px 8px 0; }
+        .tribute-author { font-family:'Montserrat',sans-serif; font-weight:500; color:var(--text-dark); margin-bottom:.5rem; }
+        .tribute-text { color:var(--text-gray); margin-bottom:.75rem; }
+        .tribute-date { font-size:.85rem; color:#999; }
+        .success { background:#e7f6ec; color:#2f7d32; padding:.75rem 1rem; border:1px solid #b9dfc7; border-radius:6px; margin-top:1rem; }
+        .error { background:#fdecea; color:#b00020; padding:.75rem 1rem; border:1px solid #f5c6cb; border-radius:6px; margin-top:1rem; }
+        .form-group { margin-bottom:1rem; }
+        .form-control, textarea { width:100%; padding:.75rem 1rem; border:1px solid var(--border-light); border-radius:6px; font-family:'Poppins',sans-serif; }
+        label { display:block; margin-bottom:.25rem; color:var(--text-gray); font-size:.9rem; }
+    </style>
+</head>
+<body>
+    <header class="memorial-header">
+        <h1 class="memorial-title">{{ memorial.first_name }} {{ memorial.last_name }}</h1>
+        <div class="life-dates">
+            {% if memorial.birth_date %}<div>{{ memorial.birth_date|date:"d.m.Y" }}</div>{% endif %}
+            {% if memorial.death_date %}<div>{{ memorial.death_date|date:"d.m.Y" }}</div>{% endif %}
+        </div>
+        {% if memorial.quote %}
+        <div class="gold-line"></div>
+        <div class="card" style="max-width:860px;margin:1rem auto;">
+            <div class="biography-text" style="text-align:center;font-style:italic;">"{{ memorial.quote }}"</div>
+        </div>
+        {% endif %}
+    </header>
+
+    <main class="container">
+        {% if memorial.biography %}
+        <section class="card">
+            <h2 class="card-title">Life Story</h2>
+            <div class="biography-text">{{ memorial.biography|linebreaks }}</div>
+        </section>
+        {% endif %}
+
+        {% if assets %}
+        <h2 class="section-title">Memories</h2>
+        <div class="media-grid">
+            {% for asset in assets %}
+            <div class="media-item">
+                {% if asset.kind == 'Foto' %}
+                <a href="{{ asset.file.url }}" target="_blank">
+                    <img src="{{ asset.file.url }}" alt="{{ asset.original_filename|default:'Photo' }}" class="media-img">
+                </a>
+                {% else %}
+                <a href="{{ asset.file.url }}" target="_blank" style="text-decoration:none;">
+                    <div class="media-document">
+                        <div class="document-icon">📄</div>
+                        <div>{{ asset.original_filename|default:"Document" }}</div>
+                    </div>
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <section class="card" id="tribute-form-card">
+            <h2 class="card-title">Leave a Tribute</h2>
+            <form id="tribute-form">
+                <div class="form-group">
+                    <label for="author_name">Your name *</label>
+                    <input class="form-control" id="author_name" name="author_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="text">Message *</label>
+                    <textarea id="text" name="text" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-approve">Send Tribute</button>
+            </form>
+            <div id="tribute-status" style="display:none;"></div>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Recent Tributes</h2>
+            {% for tribute in approved_tributes %}
+            <div class="tribute-card">
+                <div class="tribute-author">{{ tribute.author_name }}</div>
+                <div class="tribute-text">{{ tribute.text }}</div>
+                <div class="tribute-date">{{ tribute.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+            {% empty %}
+            <div class="biography-text" style="text-align:center;color:var(--text-gray);">No tributes yet</div>
+            {% endfor %}
+        </section>
+    </main>
+
+    <script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    document.getElementById('tribute-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const status = document.getElementById('tribute-status');
+        status.style.display = 'block';
+        status.className = '';
+        status.innerHTML = 'Sending...';
+        fetch('/api/memorials/{{ memorial.short_code }}/tributes/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify({
+                author_name: document.getElementById('author_name').value,
+                text: document.getElementById('text').value
+            })
+        }).then(async (resp) => {
+            if (resp.ok) {
+                document.getElementById('tribute-form').reset();
+                status.className = 'success';
+                status.innerHTML = 'Thank you. Your tribute has been sent for review.';
+            } else {
+                const t = await resp.text();
+                status.className = 'error';
+                status.innerHTML = 'Error: ' + t;
+            }
+        }).catch((err) => {
+            status.className = 'error';
+            status.innerHTML = 'Network error: ' + err;
+        });
+    });
+    </script>
+</body>
+</html>

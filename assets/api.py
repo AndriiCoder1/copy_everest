@@ -85,8 +85,9 @@ class MediaUpload(APIView):
                 checksum = hashlib.sha256(file.read()).hexdigest()
                 file.seek(0)
                 
-                if MediaAsset.objects.filter(checksum_sha256=checksum).exists():
-                    return Response({'detail':'duplicate'}, status=status.HTTP_409_CONFLICT)
+                # Проверка на дубликаты (по мемориалу, а не глобально)
+                if MediaAsset.objects.filter(memorial=memorial, checksum_sha256=checksum).exists():
+                    return Response({'detail':'duplicate in this memorial'}, status=status.HTTP_409_CONFLICT)
                 
                 # ⚡ СОЗДАЕМ АССЕТ ТОЛЬКО ОДИН РАЗ
                 asset = MediaAsset.objects.create(
@@ -97,6 +98,7 @@ class MediaUpload(APIView):
                     mime_type=file.content_type,
                     size_bytes=size,
                     checksum_sha256=checksum,
+                    is_public=True,
                 )
                 Memorial.objects.filter(pk=memorial.pk).update(storage_bytes_used=F('storage_bytes_used') + size)
             

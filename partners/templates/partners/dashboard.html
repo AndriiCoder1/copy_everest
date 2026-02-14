@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #F5F5F5;
+            --bg-lighter: #FAFAFA;
+            --text-dark: #2F2F2F;
+            --text-gray: #6F6F6F;
+            --gold-primary: #C9A45C;
+            --gold-light: #E6D3A3;
+            --gold-dark: #9E7C3A;
+            --border-light: rgba(0,0,0,0.1);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Poppins',sans-serif;background: radial-gradient(circle at center, var(--bg-lighter) 0%, var(--bg-light) 100%); color: var(--text-dark); min-height:100vh; line-height:1.6;}
+        .container{max-width:1200px; margin:0 auto; padding:2rem 1rem;}
+        .header{background:white; padding:2rem 1rem; border-bottom:1px solid var(--border-light); box-shadow:0 2px 20px rgba(0,0,0,0.05); text-align:center;}
+        .title{font-family:'Montserrat',sans-serif; font-size:2rem; letter-spacing:.08em; text-transform:uppercase;}
+        .cards{display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin:2rem 0;}
+        .card{background:white; border:1px solid var(--border-light); border-radius:10px; padding:1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.05);}
+        .metric-title{font-family:'Montserrat',sans-serif; color:var(--text-gray); font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.5rem;}
+        .metric-value{font-family:'Montserrat',sans-serif; font-size:2rem; color:var(--gold-dark);}
+        table{width:100%; border-collapse:collapse; background:white; border:1px solid var(--border-light); border-radius:10px; overflow:hidden;}
+        th,td{padding:0.9rem 1rem; border-bottom:1px solid var(--border-light); text-align:left;}
+        th{font-family:'Montserrat',sans-serif; color:var(--text-dark); background:linear-gradient(135deg, var(--gold-light), #fff);}
+        .actions a{margin-right:.5rem; text-decoration:none; color:var(--gold-dark);}
+        .btn{display:inline-block; padding:.6rem 1.2rem; border-radius:6px; font-family:'Montserrat',sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:.85rem;}
+        .btn-primary{background: linear-gradient(135deg, var(--gold-light), var(--gold-primary)); color:white;}
+        .btn-secondary{border:1px solid var(--border-light); color:var(--text-dark); background:white;}
+        .toolbar{margin:1rem 0; display:flex; gap:1rem; flex-wrap:wrap;}
+    </style>
+    </head>
+<body>
+    <div class="header">
+        <div class="title">Welcome, {{ partner.name }}</div>
+        <div style="margin-top:.5rem;color:var(--text-gray)">Partner Dashboard</div>
+    </div>
+    <main class="container">
+        <section class="cards">
+            <div class="card">
+                <div class="metric-title">Memorials</div>
+                <div class="metric-value">{{ stats.memorials }}</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">Pending Tributes</div>
+                <div class="metric-value">{{ stats.pending }}</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">Approved Tributes</div>
+                <div class="metric-value">{{ stats.approved }}</div>
+            </div>
+        </section>
+
+        <div class="toolbar">
+            <a href="/admin/memorials/memorial/add/" class="btn btn-primary">Create Memorial</a>
+            <a href="/admin/memorials/familyinvite/add/" class="btn btn-secondary">Invite Family</a>
+        </div>
+
+        <section>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Memorial</th>
+                        <th>Created</th>
+                        <th>Pending</th>
+                        <th>Approved</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for m in items %}
+                    <tr>
+                        <td>{{ m.name }}</td>
+                        <td>{{ m.created_at|date:"d.m.Y" }}</td>
+                        <td>{{ m.pending }}</td>
+                        <td>{{ m.approved }}</td>
+                        <td class="actions">
+                            <a href="{{ m.family_url }}" title="Open family interface">Family</a>
+                            <a href="/admin/memorials/qrcode/" title="QR code">QR</a>
+                            <a href="{{ m.admin_invite_url }}" title="Invite family">Invite</a>
+                            <a href="{{ m.admin_edit_url }}" title="Edit in admin">Edit</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" style="color:var(--text-gray)">No memorials yet</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

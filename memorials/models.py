@@ -26,7 +26,12 @@ class Memorial(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tracker = FieldTracker()
-
+    language = models.CharField(
+        max_length=2, 
+        default='de',
+        choices=[('de', 'Deutsch'), ('fr', 'Français'), ('it', 'Italiano'), ('en', 'English')]
+    )
+    
     def save(self, *args, **kwargs):
         # Сохраняем измененные поля перед сохранением
         self._changed_fields = self.tracker.changed()

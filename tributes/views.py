@@ -99,6 +99,7 @@ def family_full_view(request, short_code):
             'assets': assets,
             'pending_tributes': pending_tributes,
             'approved_tributes': approved_tributes,
+            'total_tributes': pending_tributes.count() + approved_tributes.count(),
             'token': token,  
         })
         
@@ -109,4 +110,23 @@ def family_full_view(request, short_code):
         return render(request, 'tributes/error.html',
                      {'error': 'Мемориал не найден'})
 
+
+def public_view(request, short_code):
+    """
+    Публичная страница мемориала для гостей (QR).
+    Показывает базовую информацию, галерею и форму отправки трибьюта.
+    """
+    memorial = get_object_or_404(Memorial, short_code=short_code, status='active')
+    # Публичные медиа
+    assets = MediaAsset.objects.filter(memorial=memorial, is_public=True)
+    # Последние 10 одобренных трибьютов
+    approved_tributes = Tribute.objects.filter(
+        memorial=memorial, status='approved'
+    ).order_by('-created_at')[:10]
+    
+    return render(request, 'tributes/public_view.html', {
+        'memorial': memorial,
+        'assets': assets,
+        'approved_tributes': approved_tributes,
+    })
 

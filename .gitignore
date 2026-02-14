@@ -274,6 +274,7 @@ test_middleware.py
 test_simple.py
 test_scalability_fixed.py
 test_ai.py
+test_interfaces.py
 load_test.py
 
 заметки/check_translations.py

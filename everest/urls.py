@@ -6,6 +6,7 @@ from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import JavaScriptCatalog
 from django.shortcuts import render
 from . import views
+from partners.views import partner_dashboard
 from everest.views import HealthCheckView
 
 
@@ -33,10 +34,10 @@ urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check-simple'),
 ]
 
-# Admin with i18n patterns (adds /en/admin/, /fr/admin/, etc.)
+# Admin and selected pages with i18n patterns (adds /en/... /fr/... etc.)
 urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
-    # You can add other prefixed views here if needed
+    path('partner/dashboard/', partner_dashboard, name='partner-dashboard'),
     prefix_default_language=True
 )
 

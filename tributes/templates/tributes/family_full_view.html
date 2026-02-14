@@ -309,6 +309,21 @@
     </header>
 
     <main class="container">
+        <!-- Dashboard counters -->
+        <section class="card" id="dashboard-counters" style="display:flex; gap:1rem; flex-wrap:wrap;">
+            <div class="card" style="flex:1; min-width:200px;">
+                <div class="card-title" style="border-bottom:none; margin:0 0 .5rem 0;">New</div>
+                <div style="font-family:'Montserrat',sans-serif; font-size:2rem; color:var(--gold-dark);" id="counter-new">{{ pending_tributes|length }}</div>
+            </div>
+            <div class="card" style="flex:1; min-width:200px;">
+                <div class="card-title" style="border-bottom:none; margin:0 0 .5rem 0;">All tributes</div>
+                <div style="font-family:'Montserrat',sans-serif; font-size:2rem; color:var(--gold-dark);" id="counter-all">{{ total_tributes }}</div>
+            </div>
+            <div class="card" style="flex:1; min-width:200px;">
+                <div class="card-title" style="border-bottom:none; margin:0 0 .5rem 0;">Media</div>
+                <div style="font-family:'Montserrat',sans-serif; font-size:2rem; color:var(--gold-dark);" id="counter-media">{{ assets|length }}</div>
+            </div>
+        </section>
         <!-- Биография -->
         {% if memorial.biography %}
         <section class="card">
@@ -411,6 +426,28 @@
         });
         </script>       
         
+        <!-- Фильтры -->
+        <section class="card" id="filters">
+            <h2 class="card-title">Filters</h2>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                <div>
+                    <label for="filter-date">Date</label>
+                    <select id="filter-date" class="form-control" style="min-width:180px;">
+                        <option value="all">All</option>
+                        <option value="today">Today</option>
+                        <option value="week">Last 7 days</option>
+                        <option value="month">Last 30 days</option>
+                    </select>
+                </div>
+                <div style="flex:1; min-width:240px;">
+                    <label for="filter-author">Author</label>
+                    <input id="filter-author" class="form-control" placeholder="Search by author..."/>
+                </div>
+                <button class="btn btn-approve" id="filter-apply">Apply</button>
+                <button class="btn btn-reject" id="filter-reset">Reset</button>
+            </div>
+        </section>
+
         <!-- Модерация трибутов -->
         <h2 class="section-title">Condolences</h2>
         <div class="tributes-container">
@@ -421,7 +458,7 @@
                 </h3>
                 
                 {% for tribute in pending_tributes %}
-                <div class="tribute-card pending">
+                <div class="tribute-card pending" data-author="{{ tribute.author_name|lower }}" data-date="{{ tribute.created_at|date:'Y-m-d' }}">
                     <div class="tribute-author">{{ tribute.author_name }}</div>
                     <div class="tribute-text">{{ tribute.text }}</div>
                     <div class="tribute-date">{{ tribute.created_at|date:"d.m.Y H:i" }}</div>
@@ -466,7 +503,7 @@
                 </h3>
                 
                 {% for tribute in approved_tributes %}
-                <div class="tribute-card">
+                <div class="tribute-card" data-author="{{ tribute.author_name|lower }}" data-date="{{ tribute.created_at|date:'Y-m-d' }}">
                     <div class="tribute-author">{{ tribute.author_name }}</div>
                     <div class="tribute-text">{{ tribute.text }}</div>
                     <div class="tribute-date">{{ tribute.created_at|date:"d.m.Y H:i" }}</div>
@@ -481,26 +518,82 @@
     </main>
 
     <script>
-        // Автообновление каждые 30 секунд
-        function refreshTributes() {
-            fetch(window.location.href)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const newDoc = parser.parseFromString(html, 'text/html');
-                    const pendingContainer = newDoc.querySelector('.tribute-tab:nth-child(1)');
-                    const approvedContainer = newDoc.querySelector('.tribute-tab:nth-child(2)');
-                    
-                    if (pendingContainer && approvedContainer) {
-                        document.querySelector('.tribute-tab:nth-child(1)').innerHTML = pendingContainer.innerHTML;
-                        document.querySelector('.tribute-tab:nth-child(2)').innerHTML = approvedContainer.innerHTML;
-                    }
-                })
-                .catch(err => console.log('Auto-refresh error:', err));
+        // Фильтры по дате и автору
+        function applyFilters() {
+            const dateVal = document.getElementById('filter-date').value;
+            const authorVal = (document.getElementById('filter-author').value || '').toLowerCase().trim();
+            const cards = document.querySelectorAll('.tribute-card');
+            const today = new Date();
+            cards.forEach(card => {
+                const author = card.getAttribute('data-author') || '';
+                const dateStr = card.getAttribute('data-date');
+                let show = true;
+                if (authorVal && !author.includes(authorVal)) {
+                    show = false;
+                }
+                if (dateVal !== 'all' && dateStr) {
+                    const d = new Date(dateStr + 'T00:00:00');
+                    const diffDays = (today - d) / (1000*60*60*24);
+                    if (dateVal === 'today' && diffDays > 1) show = false;
+                    if (dateVal === 'week' && diffDays > 7) show = false;
+                    if (dateVal === 'month' && diffDays > 30) show = false;
+                }
+                card.style.display = show ? '' : 'none';
+            });
         }
-        
-        // Запускаем автообновление
-        setInterval(refreshTributes, 30000);
+        document.getElementById('filter-apply').addEventListener('click', applyFilters);
+        document.getElementById('filter-reset').addEventListener('click', () => {
+            document.getElementById('filter-date').value = 'all';
+            document.getElementById('filter-author').value = '';
+            applyFilters();
+        });
+        // Уведомления о новых трибьютах + автообновление каждые 15 секунд
+        // Инициализация счетчика из шаблона в виде строки, затем приводим к числу
+        let lastPendingCount = Number('{{ pending_tributes|length }}') || 0;
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine'; o.frequency.value = 880;
+                o.connect(g); g.connect(ctx.destination);
+                g.gain.setValueAtTime(0.0001, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.01);
+                o.start();
+                setTimeout(() => { o.stop(); ctx.close(); }, 180);
+            } catch(e) {}
+        }
+        function showToast(msg) {
+            const el = document.createElement('div');
+            el.textContent = msg;
+            el.style.position = 'fixed';
+            el.style.right = '20px';
+            el.style.bottom = '20px';
+            el.style.background = 'rgba(0,0,0,0.8)';
+            el.style.color = 'white';
+            el.style.padding = '10px 16px';
+            el.style.borderRadius = '6px';
+            el.style.zIndex = '9999';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+        function pollNewPending() {
+            fetch(`/api/memorials/{{ memorial.id }}/tributes/?status=pending`, {
+                headers: {'X-Family-Token': '{{ token }}'}
+            })
+            .then(r => r.json())
+            .then(data => {
+                const count = Array.isArray(data) ? data.length : 0;
+                if (count > lastPendingCount) {
+                    playBeep();
+                    showToast(`New tributes: +${count - lastPendingCount}`);
+                }
+                lastPendingCount = count;
+                document.getElementById('counter-new').textContent = count;
+            })
+            .catch(()=>{});
+        }
+        setInterval(pollNewPending, 15000);
         
         // Подтверждение действий
         document.addEventListener('submit', function(e) {

@@ -12,6 +12,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.20.10
 APPEND_SLASH = True 
 
 INSTALLED_APPS = [
+    #'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,6 +34,7 @@ INSTALLED_APPS = [
 
 #Стандартный порядок middleware для Django i18n
 MIDDLEWARE = [
+    #'corsheaders.middleware.CorsMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -46,6 +48,8 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
     'everest.middleware.DisableCSRFMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True # Для разработки
 
 ROOT_URLCONF = 'everest.urls'
 

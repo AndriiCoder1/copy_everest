@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
@@ -141,5 +141,25 @@ class MemorialPublic(APIView):
     
     def get(self, request, code):
         memorial = get_object_or_404(Memorial, short_code=code, status='active')
-        data = MemorialPublicSerializer(memorial).data
-        return Response(data)
+        
+        # Контент‑негация: JSON для API‑клиентов, HTML для браузеров
+        accept = (request.headers.get('Accept') or '').lower()
+        if 'application/json' in accept:
+            # Для API-клиентов отдаем JSON
+            serializer = MemorialPublicSerializer(memorial)
+            return Response(serializer.data)
+        else:
+            # Для браузеров отдаем красивую HTML страницу
+            from tributes.models import Tribute
+            from assets.models import MediaAsset
+            
+            assets = MediaAsset.objects.filter(memorial=memorial, is_public=True)
+            tributes = Tribute.objects.filter(
+                memorial=memorial, status='approved'
+            ).order_by('-created_at')[:10]
+            
+            return render(request, 'tributes/public_view.html', {
+                'memorial': memorial,
+                'assets': assets,
+                'approved_tributes': tributes,
+            })

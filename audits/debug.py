@@ -30,7 +30,7 @@ def test_middleware():
     
     # 3. Тест публичного доступа
     print("\n3. Public access test:")
-    request = factory.get('/api/memorials/REDE2020/public/')
+    request = factory.get('/api/memorials/REDE2020/')
     middleware.process_request(request)
     print(f"Context: {getattr(request, 'audit_context', 'NO CONTEXT')}")
 
