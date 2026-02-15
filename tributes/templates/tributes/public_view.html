@@ -1,5 +1,6 @@
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -86,13 +87,13 @@
     <main class="container">
         {% if memorial.biography %}
         <section class="card">
-            <h2 class="card-title">Life Story</h2>
+            <h2 class="card-title">{% trans "Life Story" %}</h2>
             <div class="biography-text">{{ memorial.biography|linebreaks }}</div>
         </section>
         {% endif %}
 
         {% if assets %}
-        <h2 class="section-title">Memories</h2>
+        <h2 class="section-title">{% trans "Memories" %}</h2>
         <div class="media-grid">
             {% for asset in assets %}
             <div class="media-item">
@@ -114,31 +115,31 @@
         {% endif %}
 
         <section class="card" id="tribute-form-card">
-            <h2 class="card-title">Leave a Tribute</h2>
+            <h2 class="card-title">{% trans "Leave a Tribute" %}</h2>
             <form id="tribute-form">
                 <div class="form-group">
-                    <label for="author_name">Your name *</label>
+                    <label for="author_name">{% trans "Your name" %} *</label>
                     <input class="form-control" id="author_name" name="author_name" required>
                 </div>
                 <div class="form-group">
-                    <label for="text">Message *</label>
+                    <label for="text">{% trans "Message" %} *</label>
                     <textarea id="text" name="text" rows="4" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-approve">Send Tribute</button>
+                <button type="submit" class="btn btn-approve">{% trans "Send Tribute" %}</button>
             </form>
             <div id="tribute-status" style="display:none;"></div>
         </section>
 
         <section class="card">
-            <h2 class="card-title">Recent Tributes</h2>
+            <h2 class="card-title">{% trans "Recent Tributes" %}</h2>
             {% for tribute in approved_tributes %}
             <div class="tribute-card">
-                <div class="tribute-author">{{ tribute.author_name }}</div>
-                <div class="tribute-text">{{ tribute.text }}</div>
-                <div class="tribute-date">{{ tribute.created_at|date:"d.m.Y H:i" }}</div>
+                <div class="tribute-author">{% trans "Author" %}: {{ tribute.author_name }}</div>
+                <div class="tribute-text">{% trans "Message" %}: {{ tribute.text }}</div>
+                <div class="tribute-date">{% trans "Date" %}: {{ tribute.created_at|date:"d.m.Y H:i" }}</div>
             </div>
             {% empty %}
-            <div class="biography-text" style="text-align:center;color:var(--text-gray);">No tributes yet</div>
+            <div class="biography-text" style="text-align:center;color:var(--text-gray);">{% trans "No tributes yet" %}</div>
             {% endfor %}
         </section>
     </main>

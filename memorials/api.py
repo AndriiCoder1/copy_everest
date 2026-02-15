@@ -12,6 +12,7 @@ from .models import Memorial, FamilyInvite
 from .serializers import MemorialCreateSerializer, FamilyInviteCreateSerializer, MemorialPublicSerializer
 from .utils import generate_short_code
 from everest.permissions import IsPartnerUser, HasFamilyToken, get_partner_user
+from django.utils import translation
 
 class MemorialCreate(APIView):
     permission_classes = [IsPartnerUser]
@@ -145,13 +146,19 @@ class MemorialPublic(APIView):
         # Контент‑негация: JSON для API‑клиентов, HTML для браузеров
         accept = (request.headers.get('Accept') or '').lower()
         if 'application/json' in accept:
-            # Для API-клиентов отдаем JSON
+             # Для API-клиентов отдаем JSON
             serializer = MemorialPublicSerializer(memorial)
             return Response(serializer.data)
+        
+            
         else:
             # Для браузеров отдаем красивую HTML страницу
             from tributes.models import Tribute
             from assets.models import MediaAsset
+            # Для браузеров - активируем язык мемориала!
+            lang = memorial.language  # 'it', 'de', 'fr', 'en'
+            translation.activate(lang)
+            
             
             assets = MediaAsset.objects.filter(memorial=memorial, is_public=True)
             tributes = Tribute.objects.filter(
@@ -162,4 +169,5 @@ class MemorialPublic(APIView):
                 'memorial': memorial,
                 'assets': assets,
                 'approved_tributes': tributes,
+                'lang': lang,
             })

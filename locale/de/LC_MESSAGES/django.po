@@ -129,3 +129,203 @@ msgstr "Kondolenz"
 
 msgid "Cancel"
 msgstr "Abbrechen"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Life Story"
+msgstr "Lebensgeschichte"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Memories"
+msgstr "Erinnerungen"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Leave a Tribute"
+msgstr "Kondolenz hinterlassen"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Your name"
+msgstr "Ihr Name"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Message"
+msgstr "Nachricht"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Send Tribute"
+msgstr "Kondolenz senden"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Recent Tributes"
+msgstr "Neueste Kondolenzen"
+
+#: tributes/templates/tributes/public_view.html
+msgid "No tributes yet"
+msgstr "Noch keine Kondolenzen"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Author"
+msgstr "Autor"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Date"
+msgstr "Datum"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "New"
+msgstr "Neu"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All tributes"
+msgstr "Alle Kondolenzen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Media"
+msgstr "Medien"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Filters"
+msgstr "Filter"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Apply"
+msgstr "Anwenden"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reset"
+msgstr "Zurücksetzen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Search by author..."
+msgstr "Suche nach Autor..."
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Today"
+msgstr "Heute"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 7 days"
+msgstr "Letzte 7 Tage"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 30 days"
+msgstr "Letzte 30 Tage"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All"
+msgstr "Alle"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Pending Review"
+msgstr "Warten auf Prüfung"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Approve"
+msgstr "Genehmigen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reject"
+msgstr "Ablehnen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No condolences awaiting moderation"
+msgstr "Keine Kondolenzen warten auf Moderation"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No approved condolences yet"
+msgstr "Noch keine genehmigten Kondolenzen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Add Photos or Documents"
+msgstr "Fotos oder Dokumente hinzufügen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Select file"
+msgstr "Datei auswählen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Type"
+msgstr "Typ"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Description (optional)"
+msgstr "Beschreibung (optional)"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Upload"
+msgstr "Hochladen"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Photo"
+msgstr "Foto"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Document"
+msgstr "Dokument"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Text"
+msgstr "Text"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Confirm"
+msgstr "Bestätigen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Partner Dashboard"
+msgstr "Partner-Dashboard"
+
+#: partners/templates/partners/dashboard.html
+msgid "Welcome"
+msgstr "Willkommen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending Tributes"
+msgstr "Ausstehende Kondolenzen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Approved Tributes"
+msgstr "Genehmigte Kondolenzen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Create Memorial"
+msgstr "Gedenkseite erstellen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite Family"
+msgstr "Familie einladen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Your Memorials"
+msgstr "Ihre Gedenkseiten"
+
+#: partners/templates/partners/dashboard.html
+msgid "Created"
+msgstr "Erstellt"
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending"
+msgstr "Ausstehend"
+
+#: partners/templates/partners/dashboard.html
+msgid "Actions"
+msgstr "Aktionen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Family"
+msgstr "Familie"
+
+#: partners/templates/partners/dashboard.html
+msgid "QR"
+msgstr "QR"
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite"
+msgstr "Einladen"
+
+#: partners/templates/partners/dashboard.html
+msgid "Edit"
+msgstr "Bearbeiten"
+
+#: partners/templates/partners/dashboard.html
+msgid "No memorials yet"
+msgstr "Noch keine Gedenkseiten"

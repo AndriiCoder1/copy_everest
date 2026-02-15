@@ -4,7 +4,7 @@ from memorials.models import FamilyInvite, Memorial
 from .models import Tribute
 from assets.models import MediaAsset
 from audits.models import AuditLog
-
+from django.utils import translation
 
 def family_full_view(request, short_code):
     token = request.GET.get('token')
@@ -17,6 +17,8 @@ def family_full_view(request, short_code):
         # Ищем приглашение
         invite = FamilyInvite.objects.get(token=token)
         memorial = invite.memorial
+
+        translation.activate(memorial.language)
         
         # Проверяем, что короткий код совпадает
         if memorial.short_code != short_code:
@@ -100,7 +102,8 @@ def family_full_view(request, short_code):
             'pending_tributes': pending_tributes,
             'approved_tributes': approved_tributes,
             'total_tributes': pending_tributes.count() + approved_tributes.count(),
-            'token': token,  
+            'token': token,
+            'lang': memorial.language,  
         })
         
     except FamilyInvite.DoesNotExist:

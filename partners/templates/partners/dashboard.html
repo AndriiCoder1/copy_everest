@@ -1,9 +1,11 @@
+{% load i18n %}
+
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Partner Dashboard</title>
+    <title>{% trans "Partner Dashboard" %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -37,39 +39,39 @@
     </head>
 <body>
     <div class="header">
-        <div class="title">Welcome, {{ partner.name }}</div>
-        <div style="margin-top:.5rem;color:var(--text-gray)">Partner Dashboard</div>
+        <div class="title">{% trans "Welcome" %}, {{ partner.name }}</div>
+        <div style="margin-top:.5rem;color:var(--text-gray)">{% trans "Partner Dashboard" %}</div>
     </div>
     <main class="container">
         <section class="cards">
             <div class="card">
-                <div class="metric-title">Memorials</div>
+                <div class="metric-title">{% trans "Memorials" %}</div>
                 <div class="metric-value">{{ stats.memorials }}</div>
             </div>
             <div class="card">
-                <div class="metric-title">Pending Tributes</div>
+                <div class="metric-title">{% trans "Pending Tributes" %}</div>
                 <div class="metric-value">{{ stats.pending }}</div>
             </div>
             <div class="card">
-                <div class="metric-title">Approved Tributes</div>
+                <div class="metric-title">{% trans "Approved Tributes" %}</div>
                 <div class="metric-value">{{ stats.approved }}</div>
             </div>
         </section>
 
         <div class="toolbar">
-            <a href="/admin/memorials/memorial/add/" class="btn btn-primary">Create Memorial</a>
-            <a href="/admin/memorials/familyinvite/add/" class="btn btn-secondary">Invite Family</a>
+            <a href="/admin/memorials/memorial/add/" class="btn btn-primary">{% trans "Create Memorial" %}</a>
+            <a href="/admin/memorials/familyinvite/add/" class="btn btn-secondary">{% trans "Invite Family" %}</a>
         </div>
 
         <section>
             <table>
                 <thead>
                     <tr>
-                        <th>Memorial</th>
-                        <th>Created</th>
-                        <th>Pending</th>
-                        <th>Approved</th>
-                        <th>Actions</th>
+                        <th>{% trans "Memorial" %}</th>
+                        <th>{% trans "Created" %}</th>
+                        <th>{% trans "Pending" %}</th>
+                        <th>{% trans "Approved" %}</th>
+                        <th>{% trans "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,14 +82,14 @@
                         <td>{{ m.pending }}</td>
                         <td>{{ m.approved }}</td>
                         <td class="actions">
-                            <a href="{{ m.family_url }}" title="Open family interface">Family</a>
-                            <a href="/admin/memorials/qrcode/" title="QR code">QR</a>
-                            <a href="{{ m.admin_invite_url }}" title="Invite family">Invite</a>
-                            <a href="{{ m.admin_edit_url }}" title="Edit in admin">Edit</a>
+                            <a href="{{ m.family_url }}" title="Open family interface">{% trans "Family" %}</a>
+                            <a href="/admin/memorials/qrcode/" title="QR code">{% trans "QR" %}</a>
+                            <a href="{{ m.admin_invite_url }}" title="Invite family">{% trans "Invite" %}</a>
+                            <a href="{{ m.admin_edit_url }}" title="Edit in admin">{% trans "Edit" %}</a>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="5" style="color:var(--text-gray)">No memorials yet</td></tr>
+                    <tr><td colspan="5" style="color:var(--text-gray)">{% trans "No memorials yet" %}</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

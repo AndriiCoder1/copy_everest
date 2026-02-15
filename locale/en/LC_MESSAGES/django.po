@@ -1249,3 +1249,199 @@ msgstr ""
 #: .\venv\Lib\site-packages\django\views\templates\default_urlconf.html:236
 msgid "Connect, get help, or contribute"
 msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Life Story"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Memories"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Leave a Tribute"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Your name"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Message"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Send Tribute"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Recent Tributes"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "No tributes yet"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Author"
+msgstr ""
+
+#: tributes/templates/tributes/public_view.html
+msgid "Date"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "New"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All tributes"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Media"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Filters"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Apply"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reset"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Search by author..."
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Today"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 7 days"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 30 days"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Pending Review"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Approve"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reject"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No condolences awaiting moderation"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No approved condolences yet"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Add Photos or Documents"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Select file"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Type"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Description (optional)"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Upload"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Photo"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Document"
+msgstr ""
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Confirm"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Partner Dashboard"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Welcome"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending Tributes"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Approved Tributes"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Create Memorial"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite Family"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Your Memorials"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Created"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Actions"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Family"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "QR"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "Edit"
+msgstr ""
+
+#: partners/templates/partners/dashboard.html
+msgid "No memorials yet"
+msgstr ""

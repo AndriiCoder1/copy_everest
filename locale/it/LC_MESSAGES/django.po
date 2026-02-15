@@ -129,3 +129,203 @@ msgstr "Tributo"
 
 msgid "Cancel"
 msgstr "Annulla"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Life Story"
+msgstr "Storia di vita"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Memories"
+msgstr "Ricordi"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Leave a Tribute"
+msgstr "Lascia un tributo"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Your name"
+msgstr "Il tuo nome"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Message"
+msgstr "Messaggio"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Send Tribute"
+msgstr "Invia tributo"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Recent Tributes"
+msgstr "Tributi recenti"
+
+#: tributes/templates/tributes/public_view.html
+msgid "No tributes yet"
+msgstr "Nessun tributo ancora"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Author"
+msgstr "Autore"
+
+#: tributes/templates/tributes/public_view.html
+msgid "Date"
+msgstr "Data"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "New"
+msgstr "Nuovo"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All tributes"
+msgstr "Tutti i tributi"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Media"
+msgstr "Media"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Filters"
+msgstr "Filtri"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Apply"
+msgstr "Applica"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reset"
+msgstr "Reimposta"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Search by author..."
+msgstr "Cerca per autore..."
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Today"
+msgstr "Oggi"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 7 days"
+msgstr "Ultimi 7 giorni"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Last 30 days"
+msgstr "Ultimi 30 giorni"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "All"
+msgstr "Tutti"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Pending Review"
+msgstr "In attesa di revisione"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Approve"
+msgstr "Approva"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Reject"
+msgstr "Rifiuta"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No condolences awaiting moderation"
+msgstr "Nessuna condoglianza in attesa di moderazione"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "No approved condolences yet"
+msgstr "Nessuna condoglianza approvata"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Add Photos or Documents"
+msgstr "Aggiungi foto o documenti"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Select file"
+msgstr "Seleziona file"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Type"
+msgstr "Tipo"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Description (optional)"
+msgstr "Descrizione (facoltativo)"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Upload"
+msgstr "Carica"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Photo"
+msgstr "Foto"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Document"
+msgstr "Documento"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Text"
+msgstr "Testo"
+
+#: tributes/templates/tributes/family_full_view.html
+msgid "Confirm"
+msgstr "Conferma"
+
+#: partners/templates/partners/dashboard.html
+msgid "Partner Dashboard"
+msgstr "Dashboard partner"
+
+#: partners/templates/partners/dashboard.html
+msgid "Welcome"
+msgstr "Benvenuto"
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending Tributes"
+msgstr "Tributi in attesa"
+
+#: partners/templates/partners/dashboard.html
+msgid "Approved Tributes"
+msgstr "Tributi approvati"
+
+#: partners/templates/partners/dashboard.html
+msgid "Create Memorial"
+msgstr "Crea memoriale"
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite Family"
+msgstr "Invita la famiglia"
+
+#: partners/templates/partners/dashboard.html
+msgid "Your Memorials"
+msgstr "I tuoi memoriali"
+
+#: partners/templates/partners/dashboard.html
+msgid "Created"
+msgstr "Creato"
+
+#: partners/templates/partners/dashboard.html
+msgid "Pending"
+msgstr "In attesa"
+
+#: partners/templates/partners/dashboard.html
+msgid "Actions"
+msgstr "Azioni"
+
+#: partners/templates/partners/dashboard.html
+msgid "Family"
+msgstr "Famiglia"
+
+#: partners/templates/partners/dashboard.html
+msgid "QR"
+msgstr "QR"
+
+#: partners/templates/partners/dashboard.html
+msgid "Invite"
+msgstr "Invita"
+
+#: partners/templates/partners/dashboard.html
+msgid "Edit"
+msgstr "Modifica"
+
+#: partners/templates/partners/dashboard.html
+msgid "No memorials yet"
+msgstr "Nessun memoriale ancora"
